@@ -6,19 +6,18 @@ namespace Itmo.ObjectOrientedProgramming.Lab1.Entities;
 
 public class Route
 {
-    private readonly List<RouteSegment> _segments;
-
-    public Speed MaxFinalSpeed { get; }
+    private readonly List<IRouteSegment> _segments;
+    private readonly Speed _maxFinalSpeed;
 
     public Route(Speed maxFinalSpeed)
     {
         if (maxFinalSpeed.MetersPerSecond < 0) throw new ArgumentException("Max final speed cannot be negative.");
 
-        _segments = new List<RouteSegment>();
-        MaxFinalSpeed = maxFinalSpeed;
+        _segments = new List<IRouteSegment>();
+        _maxFinalSpeed = maxFinalSpeed;
     }
 
-    public void AddSegment(RouteSegment segment)
+    public void AddSegment(IRouteSegment segment)
     {
         ArgumentNullException.ThrowIfNull(segment);
 
@@ -31,7 +30,7 @@ public class Route
 
         double totalTime = 0.0;
 
-        foreach (RouteSegment segment in _segments)
+        foreach (IRouteSegment segment in _segments)
         {
             RouteSimulationResult segmentResult = segment.Pass(train);
 
@@ -41,7 +40,7 @@ public class Route
                 return segmentResult;
         }
 
-        if (train.Speed.MetersPerSecond > MaxFinalSpeed.MetersPerSecond)
+        if (train.Speed.MetersPerSecond > _maxFinalSpeed.MetersPerSecond)
             return new RouteSimulationResult.Failure();
 
         return new RouteSimulationResult.Success(new Time(totalTime));

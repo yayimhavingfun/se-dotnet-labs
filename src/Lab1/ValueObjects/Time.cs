@@ -6,6 +6,9 @@ public sealed class Time
 
     public Time(double seconds)
     {
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds))
+            throw new ArgumentException("Time must be a finite number", nameof(seconds));
+
         if (seconds < 0) throw new ArgumentException("Time cannot be negative");
         Seconds = seconds;
     }

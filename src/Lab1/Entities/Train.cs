@@ -1,19 +1,18 @@
 ﻿using Itmo.ObjectOrientedProgramming.Lab1.ResultTypes;
+using Itmo.ObjectOrientedProgramming.Lab1.Services;
 using Itmo.ObjectOrientedProgramming.Lab1.ValueObjects;
 
 namespace Itmo.ObjectOrientedProgramming.Lab1.Entities;
 
 public class Train
 {
-    public double Mass { get; }
+    private readonly Force _maxForce;
+    private readonly MovementCalculator _movementCalculator;
+    private readonly double _mass;
 
-    public Speed Speed { get; private set; }
+    private double _acceleration;
 
-    public double Acceleration { get; private set; }
-
-    public Force MaxForce { get; }
-
-    public Time Precision { get; }
+    public Speed Speed { get; set; }
 
     public Train(double mass, Force maxForce, Time precision)
     {
@@ -21,19 +20,19 @@ public class Train
         ArgumentNullException.ThrowIfNull(maxForce);
         ArgumentNullException.ThrowIfNull(precision);
 
-        Mass = mass;
-        MaxForce = maxForce;
-        Precision = precision;
+        _mass = mass;
+        _maxForce = maxForce;
         Speed = Speed.Zero;
-        Acceleration = 0;
+        _acceleration = 0;
+        _movementCalculator = new MovementCalculator(precision);
     }
 
     public bool ApplyForce(Force force)
     {
-        ArgumentNullException.ThrowIfNull(force);
-        if (Math.Abs(force.Newtons) > MaxForce.Newtons) return false;
+        if (!PhysicsService.CanApplyForce(force.Newtons, _maxForce.Newtons))
+            return false;
 
-        Acceleration = force.Newtons / Mass;
+        _acceleration = PhysicsService.CalculateAcceleration(force, _mass);
         return true;
     }
 
@@ -41,69 +40,71 @@ public class Train
     {
         ArgumentNullException.ThrowIfNull(distance);
 
-        if (Math.Abs(Speed.MetersPerSecond) < 0.001 && Acceleration <= 0)
+        if (Math.Abs(Speed.MetersPerSecond) < 0.001 && _acceleration <= 0)
             return new TrainOperationResult.Failure();
 
         double remainingDistance = distance.Meters;
-        double totalTime = 0.0;
-        Speed currentSpeed = Speed;
+        Time totalTime = Time.Zero;
+        double currentSpeed = Speed.MetersPerSecond;
 
         while (remainingDistance > 0)
         {
-            var resultantSpeed = new Speed(currentSpeed.MetersPerSecond + (Acceleration * Precision.Seconds));
+            MovementResult result = _movementCalculator.CalculateStep(currentSpeed, _acceleration, remainingDistance);
 
-            if (resultantSpeed.MetersPerSecond <= 0)
-                return new TrainOperationResult.Failure();
-
-            double distanceCovered = resultantSpeed.MetersPerSecond * Precision.Seconds;
-
-            if (distanceCovered > remainingDistance)
+            switch (result)
             {
-                double exactTime = remainingDistance / resultantSpeed.MetersPerSecond;
+                case MovementResult.Success success:
+                    Speed = new Speed(success.FinalSpeed.MetersPerSecond);
+                    return new TrainOperationResult.Success(totalTime.Add(success.Time));
 
-                totalTime += exactTime;
-                remainingDistance = 0;
-                currentSpeed = resultantSpeed;
-            }
-            else
-            {
-                remainingDistance -= distanceCovered;
-                totalTime += Precision.Seconds;
-                currentSpeed = resultantSpeed;
+                case MovementResult.ContinueMovement cont:
+                    totalTime = totalTime.Add(cont.Time);
+                    currentSpeed = cont.NewSpeed.MetersPerSecond;
+                    remainingDistance = cont.RemainingDistance;
+                    break;
+
+                case MovementResult.Failure:
+                    return new TrainOperationResult.Failure();
+
+                default:
+                    return new TrainOperationResult.Failure();
             }
         }
 
-        Speed = currentSpeed;
+        Speed = new Speed(currentSpeed);
 
-        return new TrainOperationResult.Success(new Time(totalTime));
+        return new TrainOperationResult.Success(totalTime);
     }
 
-    // braking and acceleration methods
     public TrainOperationResult AccelerateToSpeed(Speed targetSpeed)
     {
         ArgumentNullException.ThrowIfNull(targetSpeed);
 
-        if (targetSpeed.MetersPerSecond <= 0)
+        if (targetSpeed.MetersPerSecond < 0)
             return new TrainOperationResult.Failure();
 
         if (Math.Abs(Speed.MetersPerSecond - targetSpeed.MetersPerSecond) < 0.001)
             return new TrainOperationResult.Success(Time.Zero);
 
-        Time timeToReach = CalculateTimeToReachSpeed(targetSpeed);
-        if (timeToReach.Seconds < 0)
-            return new TrainOperationResult.Failure();
-
-        var requiredForce = new Force(Math.Abs(MaxForce.Newtons * 0.7));
-
+        var requiredForce = new Force(Math.Abs(_maxForce.Newtons * 0.7));
         if (!ApplyForce(requiredForce))
             return new TrainOperationResult.Failure();
 
-        Distance accelerationDistance = CalculateAccelerationDistance(targetSpeed);
-        Time simulationTime = CalculateTimeToReachSpeed(targetSpeed);
+        double acceleration = PhysicsService.CalculateAcceleration(requiredForce, _mass);
+        Time timeToReach = PhysicsService.CalculateTimeToReachSpeed(Speed, targetSpeed, acceleration);
+        if (timeToReach.Seconds <= 0)
+            return new TrainOperationResult.Failure();
 
-        Speed = targetSpeed;
+        Distance accelerationDistance = PhysicsService.CalculateAccelerationDistance(Speed, targetSpeed, _acceleration);
+        TrainOperationResult passResult = PassDistance(accelerationDistance);
 
-        return new TrainOperationResult.Success(simulationTime);
+        if (passResult is TrainOperationResult.Success success)
+        {
+            Speed = targetSpeed;
+            return new TrainOperationResult.Success(success.TotalTime);
+        }
+
+        return passResult;
     }
 
     public TrainOperationResult BrakeToStop()
@@ -111,76 +112,28 @@ public class Train
         if (Math.Abs(Speed.MetersPerSecond) < 0.001)
             return new TrainOperationResult.Success(Time.Zero);
 
-        Time timeToStop = CalculateTimeToStop();
+        Time timeToStop = PhysicsService.CalculateTimeToStop(Speed, _acceleration);
         if (timeToStop.Seconds < 0)
             return new TrainOperationResult.Failure();
 
-        double requiredAcceleration = -Speed.MetersPerSecond / timeToStop.Seconds;
+        double deceleration = -Speed.MetersPerSecond / timeToStop.Seconds;
 
-        var requiredForce = new Force(-Math.Abs(MaxForce.Newtons * 0.8));
+        var requiredForce = new Force(-Math.Abs(_maxForce.Newtons * 0.8));
 
         if (!ApplyForce(requiredForce))
             return new TrainOperationResult.Failure();
 
-        Distance brakingDistance = CalculateBrakingDistance();
-        Time brakingTime = CalculateTimeToStop();
+        var brakingDistance = new Distance(PhysicsService.CalculateBrakingDistance(Speed, deceleration));
+        Time brakingTime = PhysicsService.CalculateTimeToStop(Speed, deceleration);
 
         Speed = Speed.Zero;
-        Acceleration = 0;
+        _acceleration = 0;
 
         return new TrainOperationResult.Success(brakingTime);
     }
 
-    // calculation methods
-    public Distance CalculateBrakingDistance()
+    public bool ExceedsSpeedLimit(Speed maxAllowedSpeed)
     {
-        if (Acceleration >= 0 || Math.Abs(Speed.MetersPerSecond) < 0.001) return Distance.Zero;
-
-        // s = (v² - v0²) / (2a), но для остановки v=0 => s = -v0² / (2a)
-        return new Distance(-Math.Pow(Speed.MetersPerSecond, 2) / (2 * Acceleration));
-    }
-
-    public Distance CalculateAccelerationDistance(Speed targetSpeed)
-    {
-        ArgumentNullException.ThrowIfNull(targetSpeed);
-
-        if (targetSpeed.MetersPerSecond <= Speed.MetersPerSecond || Acceleration <= 0)
-            return Distance.Zero;
-
-        double accelerationDistance = (Math.Pow(targetSpeed.MetersPerSecond, 2) - Math.Pow(Speed.MetersPerSecond, 2)) / (2 * Acceleration);
-        return new Distance(accelerationDistance);
-    }
-
-    public Time CalculateTimeToReachSpeed(Speed targetSpeed)
-    {
-        ArgumentNullException.ThrowIfNull(targetSpeed);
-
-        if (Math.Abs(Speed.MetersPerSecond - targetSpeed.MetersPerSecond) < 0.001 || Acceleration <= 0)
-            return Time.Zero;
-
-        double timeSeconds = (targetSpeed.MetersPerSecond - Speed.MetersPerSecond) / Acceleration;
-        return new Time(Math.Max(0, timeSeconds));
-    }
-
-    public Time CalculateTimeToStop()
-    {
-        if (Math.Abs(Speed.MetersPerSecond) < 0.001 || Acceleration >= 0)
-            return Time.Zero;
-
-        double deceleration;
-        if (Acceleration >= 0)
-        {
-            deceleration = Math.Abs(MaxForce.Newtons * 0.8 / Mass);
-        }
-        else
-        {
-            deceleration = Math.Abs(Acceleration);
-        }
-
-        if (deceleration <= 0)
-            return Time.Zero;
-
-        double timeSeconds = Speed.MetersPerSecond / deceleration;
-        return new Time(timeSeconds);
+        return Speed.MetersPerSecond > maxAllowedSpeed.MetersPerSecond;
     }
 }

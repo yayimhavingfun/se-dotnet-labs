@@ -4,23 +4,28 @@ using Itmo.ObjectOrientedProgramming.Lab1.ValueObjects;
 
 namespace Itmo.ObjectOrientedProgramming.Lab1.RouteSegments;
 
-public class PowerSegment : RouteSegment
+public class PowerSegment : IRouteSegment
 {
-    public Force Force { get; }
+    private readonly Distance _length;
+    private readonly Force _force;
 
-    public PowerSegment(Distance length, Force force) : base(length)
+    public PowerSegment(Distance length, Force force)
     {
-        Force = force;
+        ArgumentNullException.ThrowIfNull(length);
+        ArgumentNullException.ThrowIfNull(force);
+
+        _length = length;
+        _force = force;
     }
 
-    public override RouteSimulationResult Pass(Train train)
+    public RouteSimulationResult Pass(Train train)
     {
         ArgumentNullException.ThrowIfNull(train);
 
-        if (train.ApplyForce(Force) == false)
+        if (train.ApplyForce(_force) == false)
             return new RouteSimulationResult.ForceFailure();
 
-        return train.PassDistance(Length) switch
+        return train.PassDistance(_length) switch
         {
             TrainOperationResult.Success success => new RouteSimulationResult.Success(success.TotalTime),
             _ => new RouteSimulationResult.Failure(),

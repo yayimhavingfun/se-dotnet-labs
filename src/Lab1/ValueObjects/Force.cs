@@ -7,5 +7,8 @@ public sealed class Force
     public Force(double newtons)
     {
         Newtons = newtons;
+
+        if (double.IsNaN(newtons) || double.IsInfinity(newtons))
+            throw new ArgumentException("Force value must be a finite number", nameof(newtons));
     }
 }

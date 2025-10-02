@@ -4,17 +4,25 @@ using Itmo.ObjectOrientedProgramming.Lab1.ValueObjects;
 
 namespace Itmo.ObjectOrientedProgramming.Lab1.RouteSegments;
 
-public class RegularSegment : RouteSegment
+public class RegularSegment : IRouteSegment
 {
-    public RegularSegment(Distance length) : base(length) { }
+    private readonly Distance _length;
 
-    public override RouteSimulationResult Pass(Train train)
+    public RegularSegment(Distance length)
+    {
+        ArgumentNullException.ThrowIfNull(length);
+
+        _length = length;
+    }
+
+    public RouteSimulationResult Pass(Train train)
     {
         ArgumentNullException.ThrowIfNull(train);
 
-        return train.PassDistance(Length) switch
+        return train.PassDistance(_length) switch
         {
-            TrainOperationResult.Success success => new RouteSimulationResult.Success(success.TotalTime),
+            TrainOperationResult.Success success =>
+            new RouteSimulationResult.Success(success.TotalTime),
             _ => new RouteSimulationResult.Failure(),
         };
     }
