@@ -9,19 +9,15 @@ public class Route
     private readonly List<IRouteSegment> _segments;
     private readonly Speed _maxFinalSpeed;
 
-    public Route(Speed maxFinalSpeed)
+    public Route(Speed maxFinalSpeed, IEnumerable<IRouteSegment> segments)
     {
-        if (maxFinalSpeed.MetersPerSecond < 0) throw new ArgumentException("Max final speed cannot be negative.");
+        if (maxFinalSpeed.MetersPerSecond < 0)
+            throw new ArgumentException("Max final speed cannot be negative.");
 
-        _segments = new List<IRouteSegment>();
+        ArgumentNullException.ThrowIfNull(segments);
+
+        _segments = segments.ToList();
         _maxFinalSpeed = maxFinalSpeed;
-    }
-
-    public void AddSegment(IRouteSegment segment)
-    {
-        ArgumentNullException.ThrowIfNull(segment);
-
-        _segments.Add(segment);
     }
 
     public RouteSimulationResult Simulate(Train train)
