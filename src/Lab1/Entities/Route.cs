@@ -6,17 +6,17 @@ namespace Itmo.ObjectOrientedProgramming.Lab1.Entities;
 
 public class Route
 {
-    private readonly List<IRouteSegment> _segments;
+    private readonly ICollection<IRouteSegment> _segments;
     private readonly Speed _maxFinalSpeed;
 
-    public Route(Speed maxFinalSpeed, IEnumerable<IRouteSegment> segments)
+    public Route(Speed maxFinalSpeed, ICollection<IRouteSegment> segments)
     {
         if (maxFinalSpeed.MetersPerSecond < 0)
             throw new ArgumentException("Max final speed cannot be negative.");
 
         ArgumentNullException.ThrowIfNull(segments);
 
-        _segments = segments.ToList();
+        _segments = segments;
         _maxFinalSpeed = maxFinalSpeed;
     }
 

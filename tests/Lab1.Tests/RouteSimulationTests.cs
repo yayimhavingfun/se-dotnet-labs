@@ -9,12 +9,13 @@ namespace Itmo.ObjectOrientedProgramming.Lab1.Tests;
 
 public class RouteSimulationTests
 {
-    private readonly MovementService _movementService;
+    private readonly MovementHelper _movementHelper;
 
     public RouteSimulationTests()
     {
+        var simulator = new Simulator();
         var movementCalculator = new MovementCalculator(new Time(0.1));
-        _movementService = new MovementService(movementCalculator);
+        _movementHelper = new MovementHelper(movementCalculator, simulator);
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class RouteSimulationTests
         {
             new PowerSegment(new Distance(80), new Force(800)), // speed = 10
             new RegularSegment(new Distance(30)),
-            new StationSegment(new Speed(15), new Time(45), _movementService),
+            new StationSegment(new Speed(15), new Time(45), _movementHelper),
             new RegularSegment(new Distance(40)),
         };
         var route = new Route(new Speed(30), segments);
@@ -84,7 +85,7 @@ public class RouteSimulationTests
         var segments = new IRouteSegment[]
         {
             new PowerSegment(new Distance(100), new Force(3000)),
-            new StationSegment(new Speed(5), new Time(30), _movementService),
+            new StationSegment(new Speed(5), new Time(30), _movementHelper),
             new RegularSegment(new Distance(50)),
         };
         var route = new Route(new Speed(30), segments);
@@ -105,7 +106,7 @@ public class RouteSimulationTests
          {
             new PowerSegment(new Distance(100), new Force(2500)),
             new RegularSegment(new Distance(40)),
-            new StationSegment(new Speed(25), new Time(45), _movementService),
+            new StationSegment(new Speed(25), new Time(45), _movementHelper),
             new RegularSegment(new Distance(60)),
          };
         var route = new Route(new Speed(15), segments);
@@ -127,7 +128,7 @@ public class RouteSimulationTests
             new PowerSegment(new Distance(50), new Force(1200)),
             new RegularSegment(new Distance(15)),
             new PowerSegment(new Distance(35), new Force(-1000)),
-            new StationSegment(new Speed(10), new Time(45), _movementService),
+            new StationSegment(new Speed(10), new Time(45), _movementHelper),
             new RegularSegment(new Distance(25)),
             new PowerSegment(new Distance(60), new Force(1100)),
             new RegularSegment(new Distance(20)),
@@ -183,9 +184,11 @@ public class RouteSimulationTests
 
     private Train CreateDefaultTrain()
     {
+        var simulator = new Simulator();
         return new Train(
-            mass: 1000,
+            mass: new Mass(1000),
             maxForce: new Force(5000),
-            precision: new Time(0.1));
+            precision: new Time(0.1),
+            simulator: simulator);
     }
 }

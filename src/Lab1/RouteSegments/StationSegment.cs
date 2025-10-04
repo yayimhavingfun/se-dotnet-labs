@@ -10,9 +10,9 @@ public class StationSegment : IRouteSegment
     private readonly Speed _maxAllowedSpeed;
     private readonly Time _baseBoardingTime;
     private readonly double _congestionCoefficient;
-    private readonly MovementService _movementService;
+    private readonly MovementHelper _movementService;
 
-    public StationSegment(Speed maxAllowedSpeed, Time baseBoardingTime, MovementService movementService, double congestionCoefficient = 1.0)
+    public StationSegment(Speed maxAllowedSpeed, Time baseBoardingTime, MovementHelper movementService, double congestionCoefficient = 1.0)
     {
         ArgumentNullException.ThrowIfNull(maxAllowedSpeed);
         ArgumentNullException.ThrowIfNull(baseBoardingTime);

@@ -22,7 +22,7 @@ public class PowerSegment : IRouteSegment
     {
         ArgumentNullException.ThrowIfNull(train);
 
-        if (train.ApplyForce(_force) == false)
+        if (train.TryApplyForce(_force) == false)
             return new RouteSimulationResult.ForceFailure();
 
         return train.PassDistance(_length) switch

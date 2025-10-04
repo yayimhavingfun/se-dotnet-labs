@@ -4,13 +4,15 @@ using Itmo.ObjectOrientedProgramming.Lab1.ValueObjects;
 
 namespace Itmo.ObjectOrientedProgramming.Lab1.Services;
 
-public class MovementService
+public class MovementHelper
 {
     private readonly MovementCalculator _movementCalculator;
+    private readonly Simulator _simulator;
 
-    public MovementService(MovementCalculator movementCalculator)
+    public MovementHelper(MovementCalculator movementCalculator, Simulator simulator)
     {
         _movementCalculator = movementCalculator;
+        _simulator = simulator;
     }
 
     public TrainOperationResult AccelerateToSpeed(Train train, Speed targetSpeed)
@@ -24,15 +26,15 @@ public class MovementService
             return new TrainOperationResult.Success(Time.Zero);
 
         var requiredForce = new Force(Math.Abs(train.MaxForce.Newtons * 0.7));
-        if (!train.ApplyForce(requiredForce))
+        if (!train.TryApplyForce(requiredForce))
             return new TrainOperationResult.Failure();
 
-        double acceleration = PhysicsService.CalculateAcceleration(requiredForce, train.Mass);
-        Time timeToReach = PhysicsService.CalculateTimeToReachSpeed(train.Speed, targetSpeed, acceleration);
+        double acceleration = _simulator.CalculateAcceleration(requiredForce, train.Mass);
+        Time timeToReach = _simulator.CalculateTimeToReachSpeed(train.Speed, targetSpeed, acceleration);
         if (timeToReach.Seconds <= 0)
             return new TrainOperationResult.Failure();
 
-        Distance accelerationDistance = PhysicsService.CalculateAccelerationDistance(train.Speed, targetSpeed, acceleration);
+        Distance accelerationDistance = _simulator.CalculateAccelerationDistance(train.Speed, targetSpeed, acceleration);
         TrainOperationResult passResult = train.PassDistance(accelerationDistance);
 
         if (passResult is TrainOperationResult.Success success)
@@ -49,7 +51,7 @@ public class MovementService
         if (Math.Abs(train.Speed.MetersPerSecond) < 0.001)
             return new TrainOperationResult.Success(Time.Zero);
 
-        Time timeToStop = PhysicsService.CalculateTimeToStop(train.Speed, train.Acceleration);
+        Time timeToStop = _simulator.CalculateTimeToStop(train.Speed, train.Acceleration);
         if (timeToStop.Seconds < 0)
             return new TrainOperationResult.Failure();
 
@@ -57,11 +59,11 @@ public class MovementService
 
         var requiredForce = new Force(-Math.Abs(train.MaxForce.Newtons * 0.8));
 
-        if (!train.ApplyForce(requiredForce))
+        if (!train.TryApplyForce(requiredForce))
             return new TrainOperationResult.Failure();
 
-        var brakingDistance = new Distance(PhysicsService.CalculateBrakingDistance(train.Speed, deceleration));
-        Time brakingTime = PhysicsService.CalculateTimeToStop(train.Speed, deceleration);
+        var brakingDistance = new Distance(_simulator.CalculateBrakingDistance(train.Speed, deceleration));
+        Time brakingTime = _simulator.CalculateTimeToStop(train.Speed, deceleration);
 
         train.Speed = Speed.Zero;
         train.Acceleration = 0;

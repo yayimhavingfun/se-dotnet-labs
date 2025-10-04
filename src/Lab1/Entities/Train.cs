@@ -6,19 +6,20 @@ namespace Itmo.ObjectOrientedProgramming.Lab1.Entities;
 
 public class Train
 {
-    private readonly MovementService _movementService;
+    private readonly Simulator _simulator;
+    private readonly MovementHelper _movementHelper;
 
     public Speed Speed { get; set; }
 
     public Force MaxForce { get; }
 
-    public double Mass { get; }
+    public Mass Mass { get; }
 
     public double Acceleration { get; set; }
 
-    public Train(double mass, Force maxForce, Time precision)
+    public Train(Mass mass, Force maxForce, Time precision, Simulator simulator)
     {
-        if (mass <= 0) throw new ArgumentException("Mass must be positive");
+        ArgumentNullException.ThrowIfNull(mass);
         ArgumentNullException.ThrowIfNull(maxForce);
         ArgumentNullException.ThrowIfNull(precision);
 
@@ -26,16 +27,17 @@ public class Train
         MaxForce = maxForce;
         Speed = Speed.Zero;
         Acceleration = 0;
+        _simulator = simulator;
         var movementCalculator = new MovementCalculator(precision);
-        _movementService = new MovementService(movementCalculator);
+        _movementHelper = new MovementHelper(movementCalculator, simulator);
     }
 
-    public bool ApplyForce(Force force)
+    public bool TryApplyForce(Force force)
     {
-        if (!PhysicsService.CanApplyForce(force.Newtons, MaxForce.Newtons))
+        if (!_simulator.CanApplyForce(force.Newtons, MaxForce.Newtons))
             return false;
 
-        Acceleration = PhysicsService.CalculateAcceleration(force, Mass);
+        Acceleration = _simulator.CalculateAcceleration(force, Mass);
         return true;
     }
 
@@ -46,6 +48,6 @@ public class Train
         if (Math.Abs(Speed.MetersPerSecond) < 0.001 && Acceleration <= 0)
             return new TrainOperationResult.Failure();
 
-        return _movementService.CalculateMovement(this, distance);
+        return _movementHelper.CalculateMovement(this, distance);
     }
 }
