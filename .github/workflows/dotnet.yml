@@ -4,10 +4,12 @@ on:
   push:
     branches: [ "master" ]
     paths:
+      - '**'
       - '!.github/**'
   pull_request:
     branches: [ "master" ]
     paths:
+      - '**'
       - '!.github/**'
 
 permissions:
