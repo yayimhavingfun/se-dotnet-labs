@@ -1,7 +1,9 @@
 name: forbid system file changes
 
 on:
-  push:
+  pull_request:
+    branches:
+      - master
     paths:
       - Directory.Build.props
       - .github/**
