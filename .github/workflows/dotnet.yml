@@ -3,8 +3,12 @@ name: dotnet build & test
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - '!.github/**'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - '!.github/**'
 
 permissions:
   contents: read
@@ -13,7 +17,7 @@ permissions:
 
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, ubuntu-latest ]
 
     steps:
       - uses: actions/checkout@v3
