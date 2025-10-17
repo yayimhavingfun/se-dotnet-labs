@@ -1,12 +1,13 @@
+using Itmo.ObjectOrientedProgramming.Lab2.Services.Logging;
 using System.Collections.ObjectModel;
 
-namespace Itmo.ObjectOrientedProgramming.Lab2.Services.Logging;
+namespace Itmo.ObjectOrientedProgramming.Lab2.Tests.Mocks;
 
 public class MockLogger : ILogger
 {
-    private Collection<string> Logs { get; } = [];
+    public int CallCount { get; private set; }
 
-    private int CallCount { get; set; }
+    public Collection<string> Logs { get; } = [];
 
     public void Log(string message)
     {
@@ -24,6 +25,11 @@ public class MockLogger : ILogger
     {
         Logs.Add($"[WARN] {warning}");
         CallCount++;
+    }
+
+    public bool ContainsLog(string searchText)
+    {
+        return Logs.Any(log => log.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 
     public void DisplayCallCount()

@@ -2,7 +2,7 @@ using Itmo.ObjectOrientedProgramming.Lab2.Models;
 
 namespace Itmo.ObjectOrientedProgramming.Lab2.Services.Formatters;
 
-public class ConsoleFormatter
+public class ConsoleFormatter : IMessageFormatter
 {
     public void Format(Message message)
     {

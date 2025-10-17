@@ -8,12 +8,12 @@ public class Topic
 {
     public string Name { get; }
 
-    private readonly GroupRecipient _recipients;
+    private readonly HashSet<IRecipient> _recipients;
 
     public Topic(string name)
     {
         Name = name;
-        _recipients = new GroupRecipient();
+        _recipients = [];
     }
 
     public Topic(string name, params IRecipient[] recipients) : this(name)
@@ -26,7 +26,10 @@ public class Topic
 
     public void Send(Message message)
     {
-        _recipients.Receive(message);
+        foreach (IRecipient recipient in _recipients)
+        {
+            recipient.Receive(message);
+        }
     }
 
     public void AddRecipient(IRecipient recipient)
@@ -37,6 +40,11 @@ public class Topic
     public void RemoveRecipient(IRecipient recipient)
     {
         _recipients.Remove(recipient);
+    }
+
+    public bool ContainsRecipient(IRecipient recipient)
+    {
+        return _recipients.Contains(recipient);
     }
 
     public void AddUser(User user)
@@ -54,5 +62,5 @@ public class Topic
         _recipients.Add(new AlertRecipient(alert, suspiciousWords));
     }
 
-    public int RecipientCount => _recipients.RecipientCount();
+    public int RecipientCount => _recipients.Count;
 }

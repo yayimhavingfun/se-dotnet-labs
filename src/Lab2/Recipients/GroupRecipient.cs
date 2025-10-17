@@ -23,9 +23,4 @@ public class GroupRecipient
             recipient.Receive(message);
         }
     }
-
-    public int RecipientCount()
-    {
-        return _recipients.Count;
-    }
 }

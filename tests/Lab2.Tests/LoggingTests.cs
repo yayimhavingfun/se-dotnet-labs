@@ -1,7 +1,7 @@
 using Itmo.ObjectOrientedProgramming.Lab2.Models;
 using Itmo.ObjectOrientedProgramming.Lab2.Recipients;
 using Itmo.ObjectOrientedProgramming.Lab2.Recipients.Decorators;
-using Itmo.ObjectOrientedProgramming.Lab2.Services.Logging;
+using Itmo.ObjectOrientedProgramming.Lab2.Tests.Mocks;
 using NSubstitute;
 using Xunit;
 
@@ -14,7 +14,7 @@ public class LoggingTests
     {
         // Arrange
         IRecipient mockRecipient = Substitute.For<IRecipient>();
-        ILogger mockLogger = Substitute.For<ILogger>();
+        var mockLogger = new MockLogger();
         var loggingDecorator = new LoggingDecorator(mockRecipient, mockLogger);
 
         var message = new Message("Test Header", "Test Body", ImportanceLevel.Normal);
@@ -23,7 +23,8 @@ public class LoggingTests
         loggingDecorator.Receive(message);
 
         // Assert
-        mockLogger.Received(1).Log(Arg.Is<string>(s => s.Contains("Test Header")));
+        Assert.Equal(1, mockLogger.CallCount);
+        Assert.True(mockLogger.ContainsLog("Test Header"));
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class LoggingTests
     {
         // Arrange
         IRecipient mockRecipient = Substitute.For<IRecipient>();
-        ILogger mockLogger = Substitute.For<ILogger>();
+        var mockLogger = new MockLogger();
         var loggingDecorator = new LoggingDecorator(mockRecipient, mockLogger);
 
         var message = new Message("Test Header", "Test Body", ImportanceLevel.Normal);
@@ -41,6 +42,7 @@ public class LoggingTests
 
         // Assert
         mockRecipient.Received(1).Receive(message);
+        Assert.True(mockLogger.ContainsLog("Test Header"));
     }
 
     [Fact]
@@ -48,7 +50,7 @@ public class LoggingTests
     {
         // Arrange
         IRecipient mockRecipient = Substitute.For<IRecipient>();
-        ILogger mockLogger = Substitute.For<ILogger>();
+        var mockLogger = new MockLogger();
         var loggingDecorator = new LoggingDecorator(mockRecipient, mockLogger);
 
         var message = new Message("Test Header", "Test Body", ImportanceLevel.Normal);
@@ -60,6 +62,7 @@ public class LoggingTests
         Assert.Throws<InvalidOperationException>(() => loggingDecorator.Receive(message));
 
         // Assert
-        mockLogger.Received(1).LogError(Arg.Is<string>(s => s.Contains("Test Header") && s.Contains("Test exception")));
+        Assert.True(mockLogger.ContainsLog("Test Header") && mockLogger.ContainsLog("Test exception"));
+        Assert.Equal(1, mockLogger.CallCount);
     }
 }
