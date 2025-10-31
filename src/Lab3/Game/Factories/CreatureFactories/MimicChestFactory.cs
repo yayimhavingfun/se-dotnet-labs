@@ -7,7 +7,7 @@ namespace Itmo.ObjectOrientedProgramming.Lab3.Game.Factories.CreatureFactories;
 
 public class MimicChestFactory : CreatureFactory
 {
-    public MimicChestFactory() : base("Mimic Chest",  1, 1) { }
+    public MimicChestFactory() : base("Mimic Chest", 1, 1) { }
 
     public override (ICreature Creature, IModifierApplicator ModifierApplicator, ISpellApplicator SpellApplicator)
         Create()
