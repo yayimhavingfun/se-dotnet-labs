@@ -31,7 +31,7 @@ public class CreatureBuilderTests
         var builder = new CreatureBuilder();
 
         // Act
-        (ICreature creature, Core.Modifiers.IModifierApplicator _, Core.Spells.ISpellApplicator _) =
+        (ICreature creature, IModifierApplicator _, Core.Spells.ISpellApplicator _) =
             builder.FromPredefined("Vicious Fighter").Build();
 
         // Assert
