@@ -1,8 +1,8 @@
-namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures.Abilities;
+namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 
-public class ImmortalHorror : CreatureDecorator
+public class ImmortalHorror : Creature
 {
-    public ImmortalHorror(ICreature creature) : base(creature) { }
+    public ImmortalHorror() : base("Immortal Horror", 4, 4) { }
 
     private bool _hasRevived = false;
 

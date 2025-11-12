@@ -1,44 +1,68 @@
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Spells.Strategies;
+using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Spells;
 
 public class SpellApplicator : ISpellApplicator
 {
-    private readonly List<ISpellStrategy> _strategies = [];
-    private readonly List<ISpell> _spells = [];
+    private readonly Dictionary<ICreature, List<ISpell>> _creatureSpells = new();
+    private readonly ModifierApplicator _modifierApplicator;
 
-    public void AddSpellStrategy(ISpellStrategy strategy)
+    public SpellApplicator(ModifierApplicator modifierApplicator)
     {
-        _strategies.Add(strategy);
+        _modifierApplicator = modifierApplicator;
     }
 
-    public void RemoveSpellStrategy(ISpellStrategy strategy)
+    public void AddSpell(ICreature creature, ISpell spell)
     {
-        _strategies.Remove(strategy);
-    }
-
-    public void StoreSpell(ISpell spell)
-    {
-        _spells.Add(spell);
-    }
-
-    public void RemoveSpell(ISpell spell)
-    {
-        _spells.Remove(spell);
-    }
-
-    public void ApplySpell(ISpell spell, ICreature creature)
-    {
-        if (_spells.Contains(spell))
+        if (!_creatureSpells.TryGetValue(creature, out List<ISpell>? value))
         {
-            ISpellStrategy? strategy = _strategies.FirstOrDefault(s => s.CanHandle(spell));
-            strategy?.Handle(spell, creature);
+            value = [];
+            _creatureSpells[creature] = value;
+        }
+
+        value.Add(spell);
+    }
+
+    public void RemoveSpell(ICreature creature, ISpell spell)
+    {
+        if (_creatureSpells.TryGetValue(creature, out List<ISpell>? creatureSpells))
+        {
+            creatureSpells.Remove(spell);
         }
     }
 
-    public IEnumerable<ISpell> GetSpells()
+    public void ClearSpells(ICreature creature)
     {
-        return _spells.AsReadOnly();
+        if (_creatureSpells.TryGetValue(creature, out List<ISpell>? spells))
+        {
+            spells.Clear();
+        }
+    }
+
+    public void ActivateSpell(ISpell spell, ICreature creature)
+    {
+        switch (spell)
+        {
+            case IStatSpell statSpell:
+                ApplyStatSpell(creature, statSpell);
+                break;
+            case IModifierSpell modifierSpell:
+                ApplyModifierSpell(creature, modifierSpell);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void ApplyStatSpell(ICreature creature, IStatSpell spell)
+    {
+        spell.ChangeStats(creature);
+    }
+
+    private void ApplyModifierSpell(ICreature creature, IModifierSpell spell)
+    {
+        object modifierType = spell.CreateModifier();
+        _modifierApplicator.AddModifier(creature, modifierType);
     }
 }

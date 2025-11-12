@@ -1,20 +1,20 @@
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers;
+using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.ConcreteModifiers;
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.Strategies;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Game.Factories.CreatureFactories;
 
-public class AmuletMasterFactory : CreatureFactory
+public class AmuletMasterFactory : ICreatureFactory
 {
-    public AmuletMasterFactory() : base("Amulet Master", 5, 2) { }
+    public string CreatureType => "Amulet Master";
 
-    protected override IModifierApplicator CreateModifierApplicator()
+    public ICreature Create()
     {
-        var applicator = new ModifierApplicator(new AttackStrategy(), new DefenseStrategy());
+        var baseCreature = new BasicCreature("Amulet Master", 5, 2);
 
-        applicator.AddModifier(new MagicShieldModifier());
-        applicator.AddModifier(new DoubleStrikeModifier());
+        var withShield = new MagicShieldModifier(baseCreature);
 
-        return applicator;
+        var withDoubleStrike = new DoubleStrikeModifier(withShield);
+
+        return withDoubleStrike;
     }
 }

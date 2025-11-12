@@ -1,8 +1,8 @@
-namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures.Abilities;
+namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 
-public class MimicChest : CreatureDecorator
+public class MimicChest : Creature
 {
-    public MimicChest(ICreature creature) : base(creature) { }
+    public MimicChest() : base("Mimic Chest", 1, 1) { }
 
     public override void Attack(ICreature target)
     {

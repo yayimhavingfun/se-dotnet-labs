@@ -1,57 +1,38 @@
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Spells;
+using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 using Itmo.ObjectOrientedProgramming.Lab3.Game.Builders;
+using Itmo.ObjectOrientedProgramming.Lab3.Game.Factories;
+using System.Collections.ObjectModel;
 using System.Security.Cryptography;
-using ICreature = Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures.ICreature;
-using IModifierApplicator = Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.IModifierApplicator;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Game.Logic;
 
 public class PlayerTable
 {
     private const int MaxCreatures = 7;
-    private const int MaxModifiersPerCreature = 2;
-    private const int MaxSpellsPerCreature = 2;
-    private readonly List<TableCreature> _creatures = [];
+    private readonly List<ICreature> _creatures = [];
 
-    public IReadOnlyList<TableCreature> Creatures => _creatures.AsReadOnly();
+    public ReadOnlyCollection<ICreature> Creatures => _creatures.AsReadOnly();
 
     public int CreatureCount => _creatures.Count;
 
     private bool IsFull => _creatures.Count >= MaxCreatures;
 
-    public bool AddPredefinedCreature(string name, object[]? modifiers = null, ISpell[]? spells = null)
+    public bool AddCreature(ICreature creature)
+    {
+        if (IsFull) return false;
+        _creatures.Add(creature);
+        return true;
+    }
+
+    // Метод для добавления через фабрику
+    public bool AddCreatureFromFactory(ICreatureFactory factory)
     {
         if (IsFull) return false;
 
-        if (modifiers?.Length > MaxModifiersPerCreature)
-            throw new InvalidOperationException($"Cannot add more than {MaxModifiersPerCreature} modifiers");
-
-        if (spells?.Length > MaxSpellsPerCreature)
-            throw new InvalidOperationException($"Cannot add more than {MaxSpellsPerCreature} spells");
-
         try
         {
-            CreatureBuilder builder = new CreatureBuilder().FromPredefined(name);
-
-            if (modifiers != null)
-            {
-                foreach (object modifier in modifiers)
-                {
-                    builder.WithModifier(modifier);
-                }
-            }
-
-            if (spells != null)
-            {
-                foreach (ISpell spell in spells)
-                {
-                    builder.WithSpell(spell);
-                }
-            }
-
-            (ICreature Creature, IModifierApplicator ModifierApplicator, ISpellApplicator SpellApplicator) result =
-                builder.Build();
-            _creatures.Add(new TableCreature(result.Creature, result.ModifierApplicator, result.SpellApplicator));
+            ICreature creature = factory.Create();
+            _creatures.Add(creature);
             return true;
         }
         catch (ArgumentException)
@@ -60,60 +41,25 @@ public class PlayerTable
         }
     }
 
-    public bool AddCustomCreature(
-        string name,
-        int attack,
-        int health,
-        object[]? modifiers = null,
-        ISpell[]? spells = null)
+    public bool AddCreatureFromBuilder(ICreatureBuilder builder)
     {
         if (IsFull) return false;
 
-        if (modifiers?.Length > MaxModifiersPerCreature)
-            throw new InvalidOperationException($"Cannot add more than {MaxModifiersPerCreature} modifiers");
-
-        if (spells?.Length > MaxSpellsPerCreature)
-            throw new InvalidOperationException($"Cannot add more than {MaxSpellsPerCreature} spells");
-
-        CreatureBuilder builder = new CreatureBuilder().FromCustom(name, attack, health);
-
-        if (modifiers != null)
+        try
         {
-            foreach (object modifier in modifiers)
-            {
-                builder.WithModifier(modifier);
-            }
+            ICreature creature = builder.Build();
+            _creatures.Add(creature);
+            return true;
         }
-
-        if (spells != null)
+        catch (ArgumentException)
         {
-            foreach (ISpell spell in spells)
-            {
-                builder.WithSpell(spell);
-            }
+            return false;
         }
-
-        (ICreature Creature, IModifierApplicator ModifierApplicator, ISpellApplicator SpellApplicator) result =
-            builder.Build();
-        _creatures.Add(new TableCreature(result.Creature, result.ModifierApplicator, result.SpellApplicator));
-        return true;
     }
 
     public bool RemoveCreature(ICreature creature)
     {
-        TableCreature? tableCreature = _creatures.FirstOrDefault(c => c.Creature == creature);
-        return tableCreature != null && _creatures.Remove(tableCreature);
-    }
-
-    public bool RemoveCreatureAt(int index)
-    {
-        if (index >= 0 && index < _creatures.Count)
-        {
-            _creatures.RemoveAt(index);
-            return true;
-        }
-
-        return false;
+        return _creatures.Remove(creature);
     }
 
     public void ClearTable()
@@ -121,7 +67,7 @@ public class PlayerTable
         _creatures.Clear();
     }
 
-    public TableCreature? GetRandomAttackingCreature()
+    public ICreature? GetRandomAttackingCreature()
     {
         var attacking = GetAttackingCreatures().ToList();
         if (attacking.Count == 0) return null;
@@ -134,7 +80,7 @@ public class PlayerTable
         return attacking[randomIndex];
     }
 
-    public TableCreature? GetRandomTargetableCreature()
+    public ICreature? GetRandomTargetableCreature()
     {
         var targetable = GetTargetableCreatures().ToList();
         if (targetable.Count == 0) return null;
@@ -151,13 +97,13 @@ public class PlayerTable
 
     public bool HasTargetableCreatures => GetTargetableCreatures().Any();
 
-    private IEnumerable<TableCreature> GetAttackingCreatures()
+    private IEnumerable<ICreature> GetAttackingCreatures()
     {
-        return _creatures.Where(c => c.Creature.CanAttack);
+        return _creatures.Where(c => c.CanAttack);
     }
 
-    private IEnumerable<TableCreature> GetTargetableCreatures()
+    private IEnumerable<ICreature> GetTargetableCreatures()
     {
-        return _creatures.Where(c => c.Creature.CanBeTargeted);
+        return _creatures.Where(c => c.CanBeTargeted);
     }
 }

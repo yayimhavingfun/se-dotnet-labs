@@ -1,6 +1,6 @@
 namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 
-public sealed class Creature : ICreature
+public abstract class Creature : ICreature
 {
     public string Name { get; }
 
@@ -12,20 +12,20 @@ public sealed class Creature : ICreature
 
     public bool CanBeTargeted => CurrentHealth > 0;
 
-    public Creature(string name, int attack, int health)
+    protected Creature(string name, int attack, int health)
     {
         Name = name;
         CurrentAttack = attack;
         CurrentHealth = health;
     }
 
-    public void Attack(ICreature target)
+    public virtual void Attack(ICreature target)
     {
         if (!CanAttack || !target.CanBeTargeted) return;
         target.TakeDamage(CurrentAttack);
     }
 
-    public void TakeDamage(int damage)
+    public virtual void TakeDamage(int damage)
     {
         if (damage <= 0 || !CanBeTargeted) return;
         CurrentHealth = Math.Max(0, CurrentHealth - damage);

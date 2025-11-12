@@ -1,3 +1,5 @@
+using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
+
 namespace Itmo.ObjectOrientedProgramming.Lab3.Game.Logic;
 
 public class Battle
@@ -48,8 +50,8 @@ public class Battle
 
     private BattleResult ProcessPlayerAttack(PlayerTable attackerTable, PlayerTable defenderTable, string winReason)
     {
-        TableCreature? attacker = attackerTable.GetRandomAttackingCreature();
-        TableCreature? defender = defenderTable.GetRandomTargetableCreature();
+        ICreature? attacker = attackerTable.GetRandomAttackingCreature();
+        ICreature? defender = defenderTable.GetRandomTargetableCreature();
 
         if (attacker != null && defender != null)
         {
@@ -59,7 +61,9 @@ public class Battle
 
         if (attacker != null && defender == null)
         {
-            return new BattleResult.Player1Win(winReason);
+            return attackerTable == _player1Table
+                ? new BattleResult.Player1Win(winReason)
+                : new BattleResult.Player2Win(winReason);
         }
 
         if (attacker == null && defender != null)
@@ -70,20 +74,11 @@ public class Battle
         return new BattleResult.Draw("Both players have no attacking creatures and no targetable creatures");
     }
 
-    private void ProcessAttack(TableCreature attacker, TableCreature defender)
+    private void ProcessAttack(ICreature attacker, ICreature defender)
     {
-        attacker.ModifierApplicator.ModifyAttack(attacker.Creature, defender.Creature);
-
-        if (attacker.Creature.CanAttack && defender.Creature.CanBeTargeted)
+        if (attacker.CanAttack && defender.CanBeTargeted)
         {
-            int damage = attacker.Creature.CurrentAttack;
-
-            defender.ModifierApplicator.ModifyTakeDamage(defender.Creature, damage);
-
-            if (damage > 0)
-            {
-                defender.Creature.TakeDamage(damage);
-            }
+            attacker.Attack(defender);
         }
     }
 }

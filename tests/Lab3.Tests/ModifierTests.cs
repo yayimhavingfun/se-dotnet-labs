@@ -1,7 +1,6 @@
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers;
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.ConcreteModifiers;
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.Strategies;
 using Xunit;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Tests;
@@ -12,41 +11,41 @@ public class ModifierTests
     public void MagicShieldModifier_BlocksFirstDamage()
     {
         // Arrange
-        var creature = new Creature("Test", 3, 10);
-        var modifier = new MagicShieldModifier();
+        var creature = new BasicCreature("Test", 3, 10);
+        var modifier = new MagicShieldModifier(creature);
 
         // Act
-        modifier.ModifyTakeDamage(creature, 5);
+        modifier.TakeDamage(5);
 
         // Assert
-        Assert.Equal(10, creature.CurrentHealth); // damage blocked
+        Assert.Equal(10, creature.CurrentHealth);
     }
 
     [Fact]
     public void MagicShieldModifier_SecondDamage_NotBlocked()
     {
         // Arrange
-        var creature = new Creature("Test", 3, 10);
-        var modifier = new MagicShieldModifier();
-        modifier.ModifyTakeDamage(creature, 5); // first damage - blocked
+        var creature = new BasicCreature("Test", 3, 10);
+        var modifier = new MagicShieldModifier(creature);
+        modifier.TakeDamage(5);
 
         // Act
-        modifier.ModifyTakeDamage(creature, 3); // second damage
+        modifier.TakeDamage(3);
 
         // Assert
-        Assert.Equal(7, creature.CurrentHealth); // damage applied
+        Assert.Equal(7, creature.CurrentHealth);
     }
 
     [Fact]
     public void DoubleStrikeModifier_AttacksTwice()
     {
         // Arrange
-        var attacker = new Creature("Attacker", 2, 10);
-        var target = new Creature("Target", 1, 10);
-        var modifier = new DoubleStrikeModifier();
+        var attacker = new BasicCreature("Attacker", 2, 10);
+        var target = new BasicCreature("Target", 1, 10);
+        var modifier = new DoubleStrikeModifier(attacker);
 
         // Act
-        modifier.ModifyAttack(attacker, target);
+        modifier.Attack(target);
 
         // Assert
         Assert.Equal(6, target.CurrentHealth); // 10 - 2 - 2 = 6
@@ -56,15 +55,15 @@ public class ModifierTests
     public void ModifierApplicator_AddAndApplyModifiers_WorksCorrectly()
     {
         // Arrange
-        var applicator = new ModifierApplicator(new AttackStrategy(), new DefenseStrategy());
-        var magicShield = new MagicShieldModifier();
-        var target = new Creature("Target", 2, 10);
+        var applicator = new ModifierApplicator();
+        var baseCreature = new BasicCreature("Target", 2, 10);
 
         // Act
-        applicator.AddModifier(magicShield);
-        applicator.ModifyTakeDamage(target, 5);
+        applicator.AddModifier(baseCreature, new MagicShieldModifier(baseCreature));
+        ICreature modifiedCreature = applicator.ActivateModifier(baseCreature, typeof(MagicShieldModifier));
+        modifiedCreature.TakeDamage(5);
 
         // Assert
-        Assert.Equal(10, target.CurrentHealth); // damage blocked by shield
+        Assert.Equal(10, modifiedCreature.CurrentHealth);
     }
 }

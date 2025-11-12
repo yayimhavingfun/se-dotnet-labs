@@ -1,61 +1,55 @@
 using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
-using Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.Strategies;
+using System.Reflection;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers;
 
 public class ModifierApplicator : IModifierApplicator
 {
-    private readonly List<IModifierStrategy> _strategies;
-    private readonly Dictionary<Type, List<object>> _modifiers = new();
+    private readonly Dictionary<ICreature, List<object>> _creatureModifiers = new();
 
-    public ModifierApplicator(params IModifierStrategy[] strategies)
+    public void AddModifier(ICreature creature, object modifier)
     {
-        _strategies = strategies.ToList();
+        if (!_creatureModifiers.TryGetValue(creature, out List<object>? value))
+        {
+            value = [];
+            _creatureModifiers[creature] = value;
+        }
+
+        value.Add(modifier);
     }
 
-    public void AddModifier(object modifier)
+    public void RemoveModifier(ICreature creature, ICreature modifier)
     {
-        IModifierStrategy? strategy = _strategies.FirstOrDefault(s => s.CanHandle(modifier));
-        if (strategy != null)
+        if (_creatureModifiers.TryGetValue(creature, out List<object>? creatureModifier))
         {
-            Type type = strategy.GetType();
-            if (!_modifiers.ContainsKey(type))
-                _modifiers[type] = [];
-            _modifiers[type].Add(modifier);
+            creatureModifier.Remove(modifier);
         }
     }
 
-    public void RemoveModifier(object modifier)
+    public void ClearModifiers(ICreature creature)
     {
-        foreach (KeyValuePair<Type, List<object>> kvp in _modifiers)
+        if (_creatureModifiers.TryGetValue(creature, out List<object>? modifier))
         {
-            kvp.Value.Remove(modifier);
+            modifier.Clear();
         }
     }
 
-    public void ModifyAttack(ICreature attacker, ICreature target)
+    public ICreature ActivateModifier(ICreature creature, Type modifierType)
     {
-        IEnumerable<AttackStrategy> attackStrategies = _strategies.OfType<AttackStrategy>();
-        foreach (AttackStrategy strategy in attackStrategies)
-        {
-            if (_modifiers.TryGetValue(strategy.GetType(), out List<object>? modifiers))
-            {
-                foreach (object modifier in modifiers)
-                    strategy.HandleAttack(modifier, attacker, target);
-            }
-        }
+        if (!_creatureModifiers.TryGetValue(creature, out List<object>? creatureModifier))
+            return creature;
+
+        object? modifier = creatureModifier.FirstOrDefault(m => m.GetType() == modifierType);
+        if (modifier == null) return creature;
+        _creatureModifiers[creature].Remove(modifier);
+        return ApplyModifier(creature, modifier);
     }
 
-    public void ModifyTakeDamage(ICreature target, int damage)
+    public ICreature ApplyModifier(ICreature creature, object modifier)
     {
-        IEnumerable<DefenseStrategy> defenseStrategies = _strategies.OfType<DefenseStrategy>();
-        foreach (DefenseStrategy strategy in defenseStrategies)
-        {
-            if (_modifiers.TryGetValue(strategy.GetType(), out List<object>? modifiers))
-            {
-                foreach (object modifier in modifiers)
-                    strategy.HandleDefense(modifier, target, damage);
-            }
-        }
+        ConstructorInfo? constructor = modifier.GetType().GetConstructor([typeof(ICreature)]);
+        return constructor != null
+            ? (ICreature)constructor.Invoke([creature])
+            : creature;
     }
 }

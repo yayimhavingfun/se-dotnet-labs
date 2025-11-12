@@ -2,19 +2,39 @@ using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.ConcreteModifiers;
 
-public class DoubleStrikeModifier
+public class DoubleStrikeModifier : ICreature
 {
-    public string Name => "Double Strike";
+    private readonly ICreature _creature;
+    private bool _isActive = true;
 
-    private bool IsActive { get; set; } = true;
-
-    public void ModifyAttack(ICreature creature, ICreature target)
+    public DoubleStrikeModifier(ICreature creature)
     {
-        creature.Attack(target);
-        if (target.CanBeTargeted && IsActive)
+        _creature = creature;
+    }
+
+    public string Name => _creature.Name;
+
+    public int CurrentAttack { get => _creature.CurrentAttack; set => _creature.CurrentAttack = value; }
+
+    public int CurrentHealth { get => _creature.CurrentHealth; set => _creature.CurrentHealth = value; }
+
+    public bool CanAttack => _creature.CanAttack;
+
+    public bool CanBeTargeted => _creature.CanBeTargeted;
+
+    public void Attack(ICreature target)
+    {
+        _creature.Attack(target);
+
+        if (target.CanBeTargeted && _isActive && _creature.CanAttack)
         {
-            creature.Attack(target);
-            IsActive = false;
+            _creature.Attack(target);
+            _isActive = false;
         }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        _creature.TakeDamage(damage);
     }
 }

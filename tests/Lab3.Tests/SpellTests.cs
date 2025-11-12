@@ -11,7 +11,7 @@ public class SpellTests
     public void StrengthPotion_IncreasesAttack()
     {
         // Arrange
-        var creature = new Creature("Test", 5, 10);
+        var creature = new BasicCreature("Test", 5, 10);
         var potion = new StrengthPotion();
 
         // Act
@@ -25,7 +25,7 @@ public class SpellTests
     public void StaminaPotion_IncreasesHealth()
     {
         // Arrange
-        var creature = new Creature("Test", 5, 10);
+        var creature = new BasicCreature("Test", 5, 10);
         var potion = new StaminaPotion();
 
         // Act
@@ -39,7 +39,7 @@ public class SpellTests
     public void MagicMirror_SwapsStats()
     {
         // Arrange
-        var creature = new Creature("Test", 5, 10);
+        var creature = new BasicCreature("Test", 5, 10);
         var mirror = new MagicMirror();
 
         // Act
@@ -60,6 +60,6 @@ public class SpellTests
         object modifier = amulet.CreateModifier();
 
         // Assert
-        Assert.IsType<MagicShieldModifier>(modifier);
+        Assert.Equal(typeof(MagicShieldModifier), modifier);
     }
 }

@@ -2,20 +2,47 @@ using Itmo.ObjectOrientedProgramming.Lab3.Core.Creatures;
 
 namespace Itmo.ObjectOrientedProgramming.Lab3.Core.Modifiers.ConcreteModifiers;
 
-public class MagicShieldModifier
+public class MagicShieldModifier : ICreature
 {
-    public string Name => "Magic Shield";
+    private readonly ICreature _creature;
+    private bool _isActive = true;
 
-    private bool IsActive { get; set; } = true;
-
-    public void ModifyTakeDamage(ICreature creature, int damage)
+    public MagicShieldModifier(ICreature creature)
     {
-        if (creature.CanBeTargeted && IsActive)
+        _creature = creature;
+    }
+
+    public string Name => _creature.Name;
+
+    public int CurrentAttack
+    {
+        get => _creature.CurrentAttack;
+        set => _creature.CurrentAttack = value;
+    }
+
+    public int CurrentHealth
+    {
+        get => _creature.CurrentHealth;
+        set => _creature.CurrentHealth = value;
+    }
+
+    public bool CanAttack => _creature.CanAttack;
+
+    public bool CanBeTargeted => _creature.CanBeTargeted;
+
+    public void TakeDamage(int damage)
+    {
+        if (_creature.CanBeTargeted && _isActive)
         {
-            IsActive = false;
+            _isActive = false;
             return;
         }
 
-        creature.TakeDamage(damage);
+        _creature.TakeDamage(damage);
+    }
+
+    public void Attack(ICreature target)
+    {
+        _creature.Attack(target);
     }
 }

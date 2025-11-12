@@ -8,6 +8,6 @@ public class ProtectionAmulet : IModifierSpell
 
     public object CreateModifier()
     {
-        return new MagicShieldModifier();
+        return typeof(MagicShieldModifier);
     }
 }
