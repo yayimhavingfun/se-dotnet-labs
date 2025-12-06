@@ -16,14 +16,26 @@ public class TreeListCommand : ICommand
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("Tree List", "Not connected");
 
         if (_context.CurrentPath == null)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("Tree List", "Current path is not set");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("TreeList", "File system is not available");
+        try
+        {
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.GetChildren(_context.CurrentPath, _depth);
 
-        return _context.CurrentFileSystem.GetChildren(_context.CurrentPath, _depth);
+            if (result is FileSystemResult.Success success)
+            {
+                return success;
+            }
+
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("Tree List", ex.Message);
+        }
     }
 }

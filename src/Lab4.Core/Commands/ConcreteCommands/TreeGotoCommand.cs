@@ -10,24 +10,32 @@ public class TreeGotoCommand : ICommand
     public TreeGotoCommand(ApplicationContext context, string path)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _path = path ?? throw new ArgumentNullException(nameof(path));
+
+        _path = !string.IsNullOrWhiteSpace(path)
+            ? path
+            : throw new ArgumentException("Path cannot be empty", nameof(path));
     }
 
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("Tree Goto", "Not connected");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("Disconnect", "File system is not initialized");
-
-        FileSystemResult result = _context.CurrentFileSystem.ChangeDirectory(_path);
-
-        if (result is FileSystemResult.DirectoryChanged changed)
+        try
         {
-            _context.CurrentPath = changed.NewPath;
-        }
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.ChangeDirectory(_path);
 
-        return result;
+            if (result is FileSystemResult.Success)
+            {
+                return new FileSystemResult.Success("Tree Goto", "Changed directories successfully");
+            }
+
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("Tree Goto", ex.Message);
+        }
     }
 }

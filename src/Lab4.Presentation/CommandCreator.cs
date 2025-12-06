@@ -5,11 +5,11 @@ using Itmo.ObjectOrientedProgramming.Lab4.Presentation.Parser.Models;
 
 namespace Itmo.ObjectOrientedProgramming.Lab4.Presentation;
 
-public class CommandFactory
+public class CommandCreator
 {
     private readonly ApplicationContext _context;
 
-    public CommandFactory(ApplicationContext context)
+    public CommandCreator(ApplicationContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }

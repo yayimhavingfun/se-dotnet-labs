@@ -10,20 +10,32 @@ public class FileDeleteCommand : ICommand
     public FileDeleteCommand(ApplicationContext context, string path)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _path = path ?? throw new ArgumentNullException(nameof(path));
+
+        _path = !string.IsNullOrWhiteSpace(path)
+            ? path
+            : throw new ArgumentException("Source path cannot be empty", nameof(path));
     }
 
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("File Delete", "Not connected");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("FileDelete", "File system is not available");
+        try
+        {
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.DeleteFile(_path);
 
-        if (string.IsNullOrWhiteSpace(_path))
-            return new FileSystemResult.OperationFailed("FileDelete", "Path is empty");
+            if (result is FileSystemResult.Success)
+            {
+                return new FileSystemResult.Success("File Delete", "File deleted successfully");
+            }
 
-        return _context.CurrentFileSystem.DeleteFile(_path);
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("File Delete", ex.Message);
+        }
     }
 }

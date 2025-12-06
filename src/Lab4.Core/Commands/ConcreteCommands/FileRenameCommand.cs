@@ -11,24 +11,36 @@ public class FileRenameCommand : ICommand
     public FileRenameCommand(ApplicationContext context, string path, string newName)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _path = path ?? throw new ArgumentNullException(nameof(path));
-        _newName = newName ?? throw new ArgumentNullException(nameof(newName));
+
+        _path = !string.IsNullOrWhiteSpace(path)
+            ? path
+            : throw new ArgumentException("Source path cannot be empty", nameof(path));
+
+        _newName = string.IsNullOrWhiteSpace(newName)
+            ? newName
+            : throw new ArgumentException("Destination path cannot be empty", nameof(newName));
     }
 
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("File Rename", "Not connected");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("FileRename", "File system is not available");
+        try
+        {
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.MoveFile(_path, _newName);
 
-        if (string.IsNullOrWhiteSpace(_path))
-            return new FileSystemResult.OperationFailed("FileRename", "Path is empty");
+            if (result is FileSystemResult.Success)
+            {
+                return new FileSystemResult.Success("File Rename", "File renamed successfully");
+            }
 
-        if (string.IsNullOrWhiteSpace(_newName))
-            return new FileSystemResult.OperationFailed("FileRename", "New name is empty");
-
-        return _context.CurrentFileSystem.RenameFile(_path, _newName);
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("File Rename", ex.Message);
+        }
     }
 }

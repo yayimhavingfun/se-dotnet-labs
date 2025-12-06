@@ -2,10 +2,10 @@ using Itmo.ObjectOrientedProgramming.Lab4.Core;
 using Itmo.ObjectOrientedProgramming.Lab4.Core.Commands;
 using Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem;
 using Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem.Nodes;
+using Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem.Visitor;
 using Itmo.ObjectOrientedProgramming.Lab4.Presentation.Parser;
 using Itmo.ObjectOrientedProgramming.Lab4.Presentation.Parser.CommandHandlers;
 using Itmo.ObjectOrientedProgramming.Lab4.Presentation.Parser.Models;
-using Itmo.ObjectOrientedProgramming.Lab4.Presentation.Visitor;
 
 namespace Itmo.ObjectOrientedProgramming.Lab4.Presentation;
 
@@ -13,14 +13,14 @@ public class ConsoleApplication
 {
     private readonly ApplicationContext _context = new();
     private readonly CommandParser _parser;
-    private readonly CommandFactory _commandFactory;
+    private readonly CommandCreator _commandCreator;
     private readonly TreePrintingVisitor _treeVisitor = new();
     private bool _isRunning = true;
 
     public ConsoleApplication()
     {
         _parser = CreateCommandParser();
-        _commandFactory = new CommandFactory(_context);
+        _commandCreator = new CommandCreator(_context);
     }
 
     public void Run()
@@ -71,104 +71,62 @@ public class ConsoleApplication
     private void ExecuteCommand(string input)
     {
         ParsedCommand parsedCommand = _parser.Parse(input);
-        ICommand command = _commandFactory.Create(parsedCommand);
+        ICommand command = _commandCreator.Create(parsedCommand);
         FileSystemResult result = command.Execute();
         PrintResult(result);
     }
 
     private void PrintResult(FileSystemResult result)
     {
-        switch (result)
+        if (result is FileSystemResult.Success success)
         {
-            case FileSystemResult.ChildrenList childrenList:
-                PrintTree(childrenList);
-                break;
-
-            case FileSystemResult.FileContent fileContent:
-                Console.WriteLine($"=== File Content ===\n{fileContent.Content}\n==================");
-                break;
-
-            case FileSystemResult.Connected connected:
-                Console.WriteLine($"Connected to: {connected.Address}");
-                break;
-
-            case FileSystemResult.Disconnected:
-                Console.WriteLine("Disconnected successfully");
-                break;
-
-            case FileSystemResult.DirectoryChanged changed:
-                Console.WriteLine($"Directory changed to: {changed.NewPath}");
-                break;
-
-            case FileSystemResult.FileMoved:
-                Console.WriteLine("File moved successfully");
-                break;
-
-            case FileSystemResult.FileCopied:
-                Console.WriteLine("File copied successfully");
-                break;
-
-            case FileSystemResult.FileDeleted:
-                Console.WriteLine("File deleted successfully");
-                break;
-
-            case FileSystemResult.FileRenamed:
-                Console.WriteLine("File renamed successfully");
-                break;
-
-            case FileSystemResult.NotConnected:
-                Console.WriteLine("Error: Not connected to any file system");
-                break;
-
-            case FileSystemResult.AlreadyConnected:
-                Console.WriteLine("Error: Already connected");
-                break;
-
-            case FileSystemResult.OperationFailed failed:
-                Console.WriteLine($"Error: {failed.Operation} failed - {failed.Reason}");
-                break;
-
-            case FileSystemResult.NotFound notFound:
-                Console.WriteLine($"Error: Path not found: {notFound.Path}");
-                break;
-
-            case FileSystemResult.AccessDenied accessDenied:
-                Console.WriteLine($"Error: Access denied: {accessDenied.Path}");
-                break;
-
-            case FileSystemResult.NotADirectory notADir:
-                Console.WriteLine($"Error: Not a directory: {notADir.Path}");
-                break;
-
-            case FileSystemResult.NotAFile notAFile:
-                Console.WriteLine($"Error: Not a file: {notAFile.Path}");
-                break;
-
-            case FileSystemResult.PathOutsideRoot outside:
-                Console.WriteLine($"Error: Path outside root: {outside.Path}");
-                break;
-
-            default:
-                Console.WriteLine($"Unknown result type: {result.GetType().Name}");
-                break;
+            HandleSuccessResult(success);
+        }
+        else if (result is FileSystemResult.Failure failure)
+        {
+            Console.WriteLine($"Error: {failure.Operation} failed - {failure.Reason}");
+        }
+        else
+        {
+            Console.WriteLine($"Unknown result type: {result.GetType().Name}");
         }
     }
 
-    private void PrintTree(FileSystemResult.ChildrenList childrenList)
+    private void HandleSuccessResult(FileSystemResult.Success success)
+    {
+        if (success.Data is IEnumerable<IFileSystemNode> children)
+        {
+            PrintTree(children);
+        }
+        else if (success.Data is string content)
+        {
+            Console.WriteLine($"=== File Content ===\n{content}\n==================");
+        }
+        else if (success.Data is bool exists)
+        {
+            Console.WriteLine($"Path exists: {exists}");
+        }
+        else if (success.Data is IFileSystemNode node)
+        {
+            Console.WriteLine($"Node info: {node.Name} ({node.Strategy.Type})");
+        }
+        else if (!string.IsNullOrEmpty(success.Comment))
+        {
+            Console.WriteLine($"Success: {success.Comment}");
+        }
+        else
+        {
+            Console.WriteLine($"{success.Operation} completed successfully");
+        }
+    }
+
+    private void PrintTree(IEnumerable<IFileSystemNode> children, int depth = 1)
     {
         _treeVisitor.Clear();
 
-        foreach (IFileSystemNode child in childrenList.Children)
+        foreach (IFileSystemNode child in children)
         {
-            if (child.IsDirectory)
-            {
-                IEnumerable<IFileSystemNode> grandChildren = child.GetChildren(1);
-                _treeVisitor.VisitDirectory(child, grandChildren);
-            }
-            else
-            {
-                _treeVisitor.VisitFile(child);
-            }
+            child.Accept(_treeVisitor);
         }
 
         string treeOutput = _treeVisitor.GetResult();
@@ -178,10 +136,15 @@ public class ConsoleApplication
     private CommandParser CreateCommandParser()
     {
         return new CommandParser(builder => builder
-                .AddHandler(new ConnectCommandHandler())
-                .AddHandler(new DisconnectCommandHandler())
-                .AddHandler(new TreeCommandHandler())
-                .AddHandler(new FileCommandHandler()));
+            .AddHandler(new ConnectCommandHandler())
+            .AddHandler(new DisconnectCommandHandler())
+            .AddHandler(new TreeGotoCommandHandler())
+            .AddHandler(new TreeListCommandHandler())
+            .AddHandler(new FileShowCommandHandler())
+            .AddHandler(new FileMoveCommandHandler())
+            .AddHandler(new FileCopyCommandHandler())
+            .AddHandler(new FileDeleteCommandHandler())
+            .AddHandler(new FileRenameCommandHandler()));
     }
 
     private void ShowHelp()

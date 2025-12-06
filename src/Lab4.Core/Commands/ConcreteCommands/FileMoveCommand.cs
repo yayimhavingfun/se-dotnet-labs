@@ -11,24 +11,36 @@ public class FileMoveCommand : ICommand
     public FileMoveCommand(ApplicationContext context, string sourcePath, string destinationPath)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _sourcePath = sourcePath ?? throw new ArgumentNullException(nameof(sourcePath));
-        _destinationPath = destinationPath ?? throw new ArgumentNullException(nameof(destinationPath));
+
+        _sourcePath = !string.IsNullOrWhiteSpace(sourcePath)
+            ? sourcePath
+            : throw new ArgumentException("Source path cannot be empty", nameof(sourcePath));
+
+        _destinationPath = string.IsNullOrWhiteSpace(destinationPath)
+            ? destinationPath
+            : throw new ArgumentException("Destination path cannot be empty", nameof(destinationPath));
     }
 
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("File Move", "Not connected");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("FileMove", "File system is not available");
+        try
+        {
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.MoveFile(_sourcePath, _destinationPath);
 
-        if (string.IsNullOrWhiteSpace(_sourcePath))
-            return new FileSystemResult.OperationFailed("FileMove", "Source path is empty");
+            if (result is FileSystemResult.Success)
+            {
+                return new FileSystemResult.Success("File Move", "File moved successfully");
+            }
 
-        if (string.IsNullOrWhiteSpace(_destinationPath))
-            return new FileSystemResult.OperationFailed("FileMove", "Destination path is empty");
-
-        return _context.CurrentFileSystem.MoveFile(_sourcePath, _destinationPath);
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("File Move", ex.Message);
+        }
     }
 }

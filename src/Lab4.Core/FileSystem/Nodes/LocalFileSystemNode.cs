@@ -1,3 +1,6 @@
+using Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem.Strategies;
+using Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem.Visitor;
+
 namespace Itmo.ObjectOrientedProgramming.Lab4.Core.FileSystem.Nodes;
 
 public class LocalFileSystemNode : IFileSystemNode
@@ -9,15 +12,24 @@ public class LocalFileSystemNode : IFileSystemNode
 
     public string Name => _info.Value.Name;
 
-    public bool IsDirectory => _info.Value is DirectoryInfo;
+    public string Type => Strategy.Type;
 
-    public long Size => IsDirectory ? 0 : ((FileInfo)_info.Value).Length;
+    public INodeProcessingStrategy Strategy { get; }
+
+    public long Size => Strategy is FileProcessingStrategy ? ((FileInfo)_info.Value).Length : 0;
 
     public DateTime LastModified => _info.Value.LastWriteTime;
 
     public LocalFileSystemNode(string fullPath)
     {
+        if (string.IsNullOrWhiteSpace(fullPath))
+            throw new ArgumentException("Path cannot be null or empty", nameof(fullPath));
+
         Path = fullPath;
+
+        bool pathExists = File.Exists(fullPath) || Directory.Exists(fullPath);
+        if (!pathExists)
+            throw new FileNotFoundException($"Path not found: {fullPath}", fullPath);
 
         _info = new Lazy<FileSystemInfo>(() =>
         {
@@ -27,12 +39,15 @@ public class LocalFileSystemNode : IFileSystemNode
             return new FileInfo(fullPath);
         });
 
+        Strategy = Directory.Exists(fullPath)
+            ? new DirectoryProcessingStrategy()
+            : new FileProcessingStrategy();
+
         _children = new Lazy<NodeResult>(() =>
         {
-            FileSystemInfo info = _info.Value;
-            if (info is DirectoryInfo)
-                return LoadChildren();
-            return new NodeResult.ChildrenLoaded([]);
+            return Directory.Exists(fullPath)
+                ? LoadChildren()
+                : new NodeResult.Success(new List<IFileSystemNode>());
         });
     }
 
@@ -41,92 +56,87 @@ public class LocalFileSystemNode : IFileSystemNode
         try
         {
             var node = new LocalFileSystemNode(fullPath);
-            return new NodeResult.NodeCreated(node);
+            return new NodeResult.Success(node);
         }
         catch (UnauthorizedAccessException)
         {
-            return new NodeResult.AccessDenied(fullPath);
+            return new NodeResult.Failure("ACCESS_DENIED", "Access denied", fullPath);
         }
         catch (FileNotFoundException)
         {
-            return new NodeResult.NotFound(fullPath);
+            return new NodeResult.Failure("NOT_FOUND", "Path not found", fullPath);
         }
         catch (IOException ex)
         {
-            return new NodeResult.IoError(fullPath, ex.Message);
+            return new NodeResult.Failure("IO_ERROR", ex.Message, fullPath);
         }
     }
 
     public IEnumerable<IFileSystemNode> GetChildren(int maxDepth = 1)
     {
-        if (!IsDirectory || maxDepth <= 0)
-            return [];
+        if (!Strategy.HasChildren || maxDepth <= 0)
+            yield break;
 
         NodeResult childrenResult = _children.Value;
 
-        if (childrenResult is not NodeResult.ChildrenLoaded loaded)
-            return [];
-
-        if (maxDepth == 1)
-            return loaded.Children;
-
-        var allChildren = new List<IFileSystemNode>();
-        foreach (IFileSystemNode child in loaded.Children)
+        if (childrenResult is NodeResult.Success success && success.Data is IEnumerable<IFileSystemNode> children)
         {
-            allChildren.Add(child);
-
-            if (child.IsDirectory)
+            if (maxDepth == 1)
             {
-                allChildren.AddRange(child.GetChildren(maxDepth - 1));
+                foreach (IFileSystemNode child in children)
+                {
+                    yield return child;
+                }
+
+                yield break;
+            }
+
+            foreach (IFileSystemNode child in children)
+            {
+                yield return child;
+
+                if (child.Strategy.HasChildren)
+                {
+                    foreach (IFileSystemNode grandChild in child.GetChildren(maxDepth - 1))
+                    {
+                        yield return grandChild;
+                    }
+                }
             }
         }
+    }
 
-        return allChildren;
+    public void Accept(IFileSystemVisitor visitor)
+    {
+        visitor.Visit(this);
     }
 
     private NodeResult LoadChildren()
     {
         var children = new List<IFileSystemNode>();
-        var errors = new List<string>();
 
         try
         {
-            foreach (string dir in Directory.EnumerateDirectories(Path))
+            IEnumerable<IFileSystemNode> childrenFromStrategy = Strategy.GetChildren(this);
+
+            foreach (IFileSystemNode child in childrenFromStrategy)
             {
-                NodeResult result = TryCreate(dir);
-                if (result is NodeResult.NodeCreated created)
-                    children.Add(created.Node);
-                else
-                    errors.Add($"{dir}: {result.GetType().Name}");
+                children.Add(child);
             }
 
-            foreach (string file in Directory.EnumerateFiles(Path))
-            {
-                NodeResult result = TryCreate(file);
-                if (result is NodeResult.NodeCreated created)
-                    children.Add(created.Node);
-                else
-                    errors.Add($"{file}: {result.GetType().Name}");
-            }
-
-            if (errors.Count > 0)
-            {
-                Console.WriteLine($"Some items skipped: {string.Join(", ", errors)}");
-            }
-
-            return new NodeResult.ChildrenLoaded(children);
+            return new NodeResult.Success(children);
         }
         catch (UnauthorizedAccessException)
         {
-            return new NodeResult.AccessDenied(Path);
+            return new NodeResult.Failure("ACCESS_DENIED", "Access denied", Path);
         }
         catch (DirectoryNotFoundException)
         {
-            return new NodeResult.NotFound(Path);
+            return new NodeResult.Failure("NOT_FOUND", "Path not found", Path);
         }
         catch (IOException ex)
         {
-            return new NodeResult.IoError(Path, ex.Message);
+            return new NodeResult.Failure("IO_ERROR", ex.Message, Path);
         }
     }
 }

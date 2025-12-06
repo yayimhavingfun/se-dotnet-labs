@@ -26,8 +26,8 @@ public class ApplicationContext
         CurrentPath = null;
     }
 
-    public void ChangeCurrentPath(string newPath)
+    public IFileSystem GetFileSystemOrThrow()
     {
-        CurrentPath = newPath;
+        return CurrentFileSystem ?? throw new InvalidOperationException("Not connected to any file system");
     }
 }

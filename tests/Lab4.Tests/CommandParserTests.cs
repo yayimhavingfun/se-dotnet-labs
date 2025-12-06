@@ -16,8 +16,13 @@ public class CommandParserTests
             builder
                 .AddHandler(new ConnectCommandHandler())
                 .AddHandler(new DisconnectCommandHandler())
-                .AddHandler(new TreeCommandHandler())
-                .AddHandler(new FileCommandHandler());
+                .AddHandler(new TreeGotoCommandHandler())
+                .AddHandler(new TreeListCommandHandler())
+                .AddHandler(new FileShowCommandHandler())
+                .AddHandler(new FileMoveCommandHandler())
+                .AddHandler(new FileCopyCommandHandler())
+                .AddHandler(new FileDeleteCommandHandler())
+                .AddHandler(new FileRenameCommandHandler());
         });
     }
 

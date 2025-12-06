@@ -11,21 +11,37 @@ public class FileShowCommand : ICommand
     public FileShowCommand(ApplicationContext context, string path, string mode = "console")
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _path = path ?? throw new ArgumentNullException(nameof(path));
+
+        _path = !string.IsNullOrWhiteSpace(path)
+            ? path
+            : throw new ArgumentException("Path cannot be empty", nameof(path));
+
         _mode = mode.ToLowerInvariant();
     }
 
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
-
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("FileShow", "File system is not available");
+            return new FileSystemResult.Failure("File Show", "Not connected");
 
         if (_mode != "console")
-            return new FileSystemResult.OperationFailed("FileShow", $"Mode {_mode} is not supported");
+            return new FileSystemResult.Failure("FileShow", $"Mode '{_mode}' is not supported");
 
-        return _context.CurrentFileSystem.ReadFile(_path);
+        try
+        {
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.ReadFile(_path);
+
+            if (result is FileSystemResult.Success)
+            {
+                return new FileSystemResult.Success("File Show", "File showed successfully");
+            }
+
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("File Show", ex.Message);
+        }
     }
 }

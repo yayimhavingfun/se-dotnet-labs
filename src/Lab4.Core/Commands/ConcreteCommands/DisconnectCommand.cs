@@ -14,18 +14,24 @@ public class DisconnectCommand : ICommand
     public FileSystemResult Execute()
     {
         if (!_context.IsConnected)
-            return new FileSystemResult.NotConnected();
+            return new FileSystemResult.Failure("Disconnect", "Not connected");
 
-        if (_context.CurrentFileSystem == null)
-            return new FileSystemResult.OperationFailed("Disconnect", "File system is not initialized");
-
-        FileSystemResult result = _context.CurrentFileSystem.Disconnect();
-
-        if (result is FileSystemResult.Disconnected)
+        try
         {
-            _context.Disconnect();
-        }
+            IFileSystem fileSystem = _context.GetFileSystemOrThrow();
+            FileSystemResult result = fileSystem.Disconnect();
 
-        return new FileSystemResult.Disconnected();
+            if (result is FileSystemResult.Success)
+            {
+                _context.Disconnect();
+                return new FileSystemResult.Success("Disconnect", "Disconnected successfully");
+            }
+
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new FileSystemResult.Failure("Disconnect", ex.Message);
+        }
     }
 }

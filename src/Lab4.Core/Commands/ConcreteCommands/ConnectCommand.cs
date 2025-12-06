@@ -19,25 +19,24 @@ public class ConnectCommand : ICommand
     public FileSystemResult Execute()
     {
         if (_context.IsConnected)
-            return new FileSystemResult.AlreadyConnected();
+            return new FileSystemResult.Failure("Connect", "Already connected");
 
         if (_mode != "local")
-            return new FileSystemResult.OperationFailed("Connect", $"Mode '{_mode}' not supported");
+            return new FileSystemResult.Failure("Connect", $"Mode '{_mode}' not supported");
 
         if (!IsAbsolutePath(_address))
         {
-            return new FileSystemResult.OperationFailed(
-                "Connect",
-                $"Path '{_address}' is not absolute. Connect command requires absolute path.");
+            return new FileSystemResult.Failure("Connect", $"Path '{_address}' is not absolute");
         }
 
         var fileSystem = new LocalFileSystem();
 
         FileSystemResult result = fileSystem.Connect(_address);
 
-        if (result is FileSystemResult.Connected)
+        if (result is FileSystemResult.Success)
         {
             _context.Connect(fileSystem, _address);
+            return new FileSystemResult.Success("Connect", $"Connected to: {_address}");
         }
 
         return result;
