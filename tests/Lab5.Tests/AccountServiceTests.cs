@@ -1,0 +1,95 @@
+using Core.Application.Abstractions.Repositories;
+using Core.Application.Services;
+using Core.Domain.Entities;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
+using NSubstitute;
+using Xunit;
+
+namespace Itmo.ObjectOrientedProgramming.Lab5.Tests;
+
+public class AccountServiceTests
+{
+    private readonly IAccountRepository _accountRepository;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly AccountService _service;
+
+    private readonly CancellationToken ct = CancellationToken.None;
+
+    public AccountServiceTests()
+    {
+        _accountRepository = Substitute.For<IAccountRepository>();
+        _transactionRepository = Substitute.For<ITransactionRepository>();
+        _service = new AccountService(_accountRepository, _transactionRepository);
+    }
+
+    [Fact]
+    public async Task Deposit_ShouldIncreaseBalance_WhenCalled()
+    {
+        // Arrange
+        var accountNumber = new AccountNumber("1234567890");
+        var initialBalance = new Money(1000m);
+        var depositAmount = new Money(500m);
+
+        var account = new Account(accountNumber, "hash", initialBalance);
+
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
+
+        // Act
+        TransactionResult result = await _service.DepositAsync(accountNumber, depositAmount, ct);
+
+        // Assert
+        Assert.IsType<TransactionResult.Success>(result);
+        Assert.Equal(initialBalance + depositAmount, account.Balance);
+
+        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.Received(1).UpdateAsync(account, ct);
+    }
+
+    [Fact]
+    public async Task Withdraw_ShouldDecreaseBalance_WhenSufficientFunds()
+    {
+        // Arrange
+        var accountNumber = new AccountNumber("1234567890");
+        var initialBalance = new Money(1000m);
+        var withdrawAmount = new Money(400m);
+
+        var account = new Account(accountNumber, "hash", initialBalance);
+
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
+
+        // Act
+        TransactionResult result = await _service.WithdrawAsync(accountNumber, withdrawAmount);
+
+        // Assert
+        Assert.IsType<TransactionResult.Success>(result);
+        Assert.Equal(initialBalance - withdrawAmount, account.Balance);
+
+        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.Received(1).UpdateAsync(account, ct);
+    }
+
+    [Fact]
+    public async Task Withdraw_ShouldReturnFailure_WhenInsufficientFunds()
+    {
+        // Arrange
+        var accountNumber = new AccountNumber("1234567890");
+        var initialBalance = new Money(300m);
+        var withdrawAmount = new Money(500m);
+
+        var account = new Account(accountNumber, "hash", initialBalance);
+
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
+
+        // Act
+        TransactionResult result = await _service.WithdrawAsync(accountNumber, withdrawAmount);
+
+        // Assert
+        Assert.IsType<TransactionResult.Failure>(result);
+
+        Assert.Equal(initialBalance, account.Balance);
+
+        await _transactionRepository.DidNotReceive().AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.DidNotReceive().UpdateAsync(Arg.Any<Account>(), ct);
+    }
+}
