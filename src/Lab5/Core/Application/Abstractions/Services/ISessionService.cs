@@ -1,13 +1,13 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
+namespace Core.Application.Abstractions.Services;
 
 public interface ISessionService
 {
-    Task<SessionResult> LoginUserAsync(AccountNumber number, string plainPin, CancellationToken ct = default);
+    Task<SessionResult> LoginUserAsync(AccountNumber number, string plainPin, CancellationToken ct);
 
-    Task<SessionResult> LoginAdminAsync(string systemPassword, CancellationToken ct = default);
+    Task<SessionResult> LoginAdminAsync(string systemPassword, CancellationToken ct);
 
-    Task LogoutAsync(Guid sessionId, CancellationToken ct = default);
+    Task LogoutAsync(Guid sessionId, CancellationToken ct);
 }

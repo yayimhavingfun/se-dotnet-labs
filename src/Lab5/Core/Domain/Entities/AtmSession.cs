@@ -1,8 +1,8 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+namespace Core.Domain.Entities;
 
-public sealed class AtmSession
+public class AtmSession
 {
     public Guid SessionId { get; }
 
@@ -10,24 +10,25 @@ public sealed class AtmSession
 
     public Account? Account { get; private init; }
 
-    public bool IsAdmin { get; private init; }
+    public bool IsAdmin { get; private set; }
 
-    private AtmSession()
+    public AtmSession(Guid sessionId, bool isAdmin, Account? account, DateTime createdAt)
     {
-        SessionId = Guid.NewGuid();
-        CreatedAt = DateTime.UtcNow;
-    }
-
-    public static AtmSession CreateForUser(Account account)
-    {
-        ArgumentNullException.ThrowIfNull(account, nameof(account));
-
-        return new AtmSession() { Account = account };
+        SessionId = sessionId;
+        IsAdmin = isAdmin;
+        Account = account;
+        CreatedAt = createdAt;
     }
 
     public static AtmSession CreateForAdmin()
     {
-        return new AtmSession() { IsAdmin = true };
+        return new AtmSession(Guid.NewGuid(), isAdmin: true, account: null, DateTime.UtcNow);
+    }
+
+    public static AtmSession CreateForUser(Account account)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        return new AtmSession(Guid.NewGuid(), isAdmin: false, account: account, DateTime.UtcNow);
     }
 
     public Account RequireAccount()

@@ -1,20 +1,18 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Authentication;
+using Core.Application.Abstractions.Repositories;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Entities;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Services;
+namespace Core.Application.Services;
 
 public class AdminService : IAdminService
 {
-    private readonly IHashingService _hashingService;
     private readonly IAccountRepository _accountRepository;
 
     public AdminService(IHashingService hashingService, IAccountRepository accountRepository)
     {
-        _hashingService = hashingService;
         _accountRepository = accountRepository;
     }
 
@@ -28,9 +26,7 @@ public class AdminService : IAdminService
         if (existing is not null)
             return new AccountResult.Failure("ACCOUNT_EXISTS", "Account already exists");
 
-        string pin = _hashingService.Hash(plainPin);
-
-        var account = new Account(number, pin, initialDeposit);
+        var account = new Account(number, plainPin, initialDeposit);
 
         await _accountRepository.AddAsync(account, ct);
 

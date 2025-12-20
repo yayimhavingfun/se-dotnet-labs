@@ -1,8 +1,8 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
+using Core.Application.Abstractions.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Authentication;
+namespace Core.Application.Authentication;
 
 public class HashingService : IHashingService
 {
@@ -33,6 +33,7 @@ public class HashingService : IHashingService
         byte[] computedHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(plainText + salt));
         string computedHash = Convert.ToBase64String(computedHashBytes);
 
+        Console.WriteLine(hash, computedHash);
         return hash == computedHash;
     }
 }

@@ -1,7 +1,7 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+using Core.Application.Abstractions.Authentication;
+using Core.Domain.Entities;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Authentication;
+namespace Core.Application.Authentication;
 
 public class CurrentSessionService : ICurrentSessionService
 {

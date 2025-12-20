@@ -1,4 +1,4 @@
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities.Types;
+namespace Core.Domain.Entities.Types;
 
 public enum TransactionType
 {

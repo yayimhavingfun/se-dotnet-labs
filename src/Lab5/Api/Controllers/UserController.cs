@@ -1,46 +1,50 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Entities;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/user")]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly IAccountService _accountService;
     private readonly ITransactionService _transactionService;
-    private readonly ICurrentSessionService _currentSession;
     private readonly ISessionService _sessionService;
 
     public UserController(
         IAccountService accountService,
         ITransactionService transactionService,
-        ICurrentSessionService currentSession,
         ISessionService sessionService)
     {
         _accountService = accountService;
         _transactionService = transactionService;
-        _currentSession = currentSession;
         _sessionService = sessionService;
     }
 
     public record MoneyRequest(decimal Amount);
 
+    private AccountNumber CurrentAccountNumber => new(
+        User.FindFirst("AccountNumber")?.Value
+        ?? throw new InvalidOperationException("AccountNumber claim missing"));
+
+    private Guid CurrentAccountId => Guid.Parse(
+        User.FindFirst("AccountId")?.Value
+        ?? throw new InvalidOperationException("AccountId claim missing"));
+
+    private Guid CurrentSessionId => Guid.Parse(
+        User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        ?? throw new InvalidOperationException("SessionId claim missing"));
+
     [HttpGet("balance")]
-    public async Task<IActionResult> GetBalance()
+    public async Task<IActionResult> GetBalance(CancellationToken cancellationToken)
     {
-        UnauthorizedObjectResult? check = RequireUserSession();
-        if (check is not null) return check;
-
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session is null)
-            return Unauthorized(new { message = "User session is required" });
-
-        BalanceResult result = await _accountService.GetBalanceAsync(session.AccountNumber);
+        BalanceResult result = await _accountService.GetBalanceAsync(CurrentAccountNumber, cancellationToken);
 
         return result switch
         {
@@ -51,15 +55,12 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("deposit")]
-    public async Task<IActionResult> Deposit([FromBody] MoneyRequest request)
+    public async Task<IActionResult> Deposit([FromBody] MoneyRequest request, CancellationToken cancellationToken)
     {
-        UnauthorizedObjectResult? check = RequireUserSession();
-        if (check is not null) return check;
-
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session is null) return Unauthorized();
-
-        TransactionResult result = await _accountService.DepositAsync(session.AccountNumber, new Money(request.Amount));
+        TransactionResult result = await _accountService.DepositAsync(
+            CurrentAccountNumber,
+            new Money(request.Amount),
+            cancellationToken);
 
         return result switch
         {
@@ -70,16 +71,12 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("withdraw")]
-    public async Task<IActionResult> Withdraw([FromBody] MoneyRequest request)
+    public async Task<IActionResult> Withdraw([FromBody] MoneyRequest request, CancellationToken cancellationToken)
     {
-        UnauthorizedObjectResult? check = RequireUserSession();
-        if (check is not null) return check;
-
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session is null) return Unauthorized();
-
-        TransactionResult result =
-            await _accountService.WithdrawAsync(session.AccountNumber, new Money(request.Amount));
+        TransactionResult result = await _accountService.WithdrawAsync(
+            CurrentAccountNumber,
+            new Money(request.Amount),
+            cancellationToken);
 
         return result switch
         {
@@ -90,15 +87,11 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("history")]
-    public async Task<IActionResult> GetHistory()
+    public async Task<IActionResult> GetHistory(CancellationToken cancellationToken)
     {
-        UnauthorizedObjectResult? check = RequireUserSession();
-        if (check is not null) return check;
-
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session is null) return Unauthorized();
-
-        IReadOnlyList<Transaction> history = await _transactionService.GetHistoryAsync(session.AccountId);
+        IReadOnlyList<Transaction> history = await _transactionService.GetHistoryAsync(
+            CurrentAccountId,
+            cancellationToken);
 
         return Ok(history.Select(t => new
         {
@@ -111,23 +104,17 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session is null)
-            return BadRequest(new { message = "No active session" });
-
-        await _sessionService.LogoutAsync(session.SessionId);
+        await _sessionService.LogoutAsync(CurrentSessionId, cancellationToken);
 
         return Ok(new { message = "Logged out successfully" });
     }
 
-    private UnauthorizedObjectResult? RequireUserSession()
+    [HttpGet("debug/claims")]
+    public IActionResult GetClaims()
     {
-        AtmSession? session = _currentSession.CurrentSession;
-        if (session?.Account is null)
-            return Unauthorized(new { message = "User session is required" });
-
-        return null;
+        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        return Ok(new { claims });
     }
 }

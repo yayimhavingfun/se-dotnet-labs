@@ -1,9 +1,10 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Services;
+using Core.Application.Abstractions.Authentication;
+using Core.Application.Abstractions.Services;
+using Core.Application.Authentication;
+using Core.Application.Services;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application;
+namespace Core.Application;
 
 public static class ApplicationServiceExtensions
 {

@@ -1,7 +1,7 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
+namespace Core.Application.Abstractions.Services;
 
 public interface IAdminService
 {
@@ -9,5 +9,5 @@ public interface IAdminService
         AccountNumber number,
         string plainPin,
         Money initialDeposit,
-        CancellationToken ct = default);
+        CancellationToken ct);
 }

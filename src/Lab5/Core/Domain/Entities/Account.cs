@@ -1,8 +1,8 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities.Types;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.Entities.Types;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+namespace Core.Domain.Entities;
 
 public class Account
 {

@@ -1,72 +1,75 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Authentication;
+using Core.Application.Abstractions.Repositories;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Entities;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
+using Microsoft.Extensions.Configuration;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Services;
+namespace Core.Application.Services;
 
 public class SessionService : ISessionService
 {
-    private readonly IAccountRepository _accountRepo;
-    private readonly ISessionRepository _sessionRepo;
-    private readonly ICurrentSessionService _currentSession;
-    private readonly IHashingService _hashing;
+    private readonly IAccountRepository _accountRepository;
+    private readonly ISessionRepository _sessionRepository;
+    private readonly ICurrentSessionService _currentSessionService;
+    private readonly IHashingService _hashingService;
     private readonly string _systemPasswordHash;
 
     public SessionService(
-        IAccountRepository accountRepo,
-        ISessionRepository sessionRepo,
-        ICurrentSessionService currentSession,
-        IHashingService hashing,
+        IAccountRepository accountRepository,
+        ISessionRepository sessionRepository,
+        ICurrentSessionService currentSessionService,
+        IHashingService hashingService,
         IConfiguration configuration)
     {
-        _accountRepo = accountRepo;
-        _sessionRepo = sessionRepo;
-        _currentSession = currentSession;
-        _hashing = hashing;
+        _accountRepository = accountRepository;
+        _sessionRepository = sessionRepository;
+        _currentSessionService = currentSessionService;
+        _hashingService = hashingService;
 
         string? plainPassword = configuration["SystemPassword"];
         if (string.IsNullOrEmpty(plainPassword))
             throw new InvalidOperationException("SystemPassword not configured");
 
-        _systemPasswordHash = hashing.Hash(plainPassword);
+        _systemPasswordHash = hashingService.Hash(plainPassword);
     }
 
     public async Task<SessionResult> LoginUserAsync(
         AccountNumber number,
         string plainPin,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
-        Account? account = await _accountRepo.FindByNumberAsync(number, ct);
-        if (account is null || !_hashing.Verify(plainPin, account.PinHash))
+        Account? account = await _accountRepository.FindByNumberAsync(number, ct);
+
+        if (account is null || !_hashingService.Verify(plainPin, account.PinHash))
             return new SessionResult.Failure("INVALID_PIN", "invalid pin");
 
         var session = AtmSession.CreateForUser(account);
-        await _sessionRepo.AddAsync(session, ct);
-        _currentSession.SetCurrentSession(session);
+
+        await _sessionRepository.AddAsync(session, ct);
+        _currentSessionService.SetCurrentSession(session);
 
         return new SessionResult.Success(session);
     }
 
-    public async Task<SessionResult> LoginAdminAsync(string systemPassword, CancellationToken ct = default)
+    public async Task<SessionResult> LoginAdminAsync(string systemPassword, CancellationToken ct)
     {
-        if (!_hashing.Verify(systemPassword, _systemPasswordHash))
+        if (!_hashingService.Verify(systemPassword, _systemPasswordHash))
             return new SessionResult.Failure("INVALID_PASSWORD", "invalid password");
 
         var session = AtmSession.CreateForAdmin();
-        await _sessionRepo.AddAsync(session, ct);
-        _currentSession.SetCurrentSession(session);
+        await _sessionRepository.AddAsync(session, ct);
+        _currentSessionService.SetCurrentSession(session);
 
         return new SessionResult.Success(session);
     }
 
-    public async Task LogoutAsync(Guid sessionId, CancellationToken ct = default)
+    public async Task LogoutAsync(Guid sessionId, CancellationToken ct)
     {
-        if (_currentSession.CurrentSession?.SessionId == sessionId)
-            _currentSession.ClearCurrentSession();
+        if (_currentSessionService.CurrentSession?.SessionId == sessionId)
+            _currentSessionService.ClearCurrentSession();
 
-        await _sessionRepo.DeleteAsync(sessionId, ct);
+        await _sessionRepository.DeleteAsync(sessionId, ct);
     }
 }

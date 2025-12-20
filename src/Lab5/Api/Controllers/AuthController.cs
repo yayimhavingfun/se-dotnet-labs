@@ -1,9 +1,9 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
@@ -23,11 +23,12 @@ public class AuthController : ControllerBase
     public record LoginResponse(Guid SessionId);
 
     [HttpPost("user")]
-    public async Task<IActionResult> LoginUser([FromBody] LoginUserRequest request)
+    public async Task<IActionResult> LoginUser([FromBody] LoginUserRequest request, CancellationToken cancellationToken)
     {
         SessionResult result = await _sessionService.LoginUserAsync(
             new AccountNumber(request.AccountNumber),
-            request.Pin);
+            request.Pin,
+            cancellationToken);
 
         return result switch
         {
@@ -38,9 +39,11 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("admin")]
-    public async Task<IActionResult> LoginAdmin([FromBody] LoginAdminRequest request)
+    public async Task<IActionResult> LoginAdmin(
+        [FromBody] LoginAdminRequest request,
+        CancellationToken cancellationToken)
     {
-        SessionResult result = await _sessionService.LoginAdminAsync(request.Password);
+        SessionResult result = await _sessionService.LoginAdminAsync(request.Password, cancellationToken);
 
         return result switch
         {

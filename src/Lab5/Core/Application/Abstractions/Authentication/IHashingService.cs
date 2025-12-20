@@ -1,4 +1,4 @@
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
+namespace Core.Application.Abstractions.Authentication;
 
 public interface IHashingService
 {

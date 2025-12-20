@@ -1,10 +1,12 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+using Core.Domain.Entities;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
+namespace Core.Application.Abstractions.Repositories;
 
 public interface ITransactionRepository
 {
-    Task AddAsync(Transaction transaction, CancellationToken ct = default);
+    Task AddAsync(Transaction transaction, CancellationToken ct);
 
-    Task<IReadOnlyList<Transaction>> GetByAccountIdAsync(Guid accountId, CancellationToken ct = default);
+    Task<IReadOnlyList<Transaction>> GetByAccountIdAsync(Guid accountId, CancellationToken ct);
+
+    Task DeleteByAccountIdAsync(Guid accountId, CancellationToken ct);
 }

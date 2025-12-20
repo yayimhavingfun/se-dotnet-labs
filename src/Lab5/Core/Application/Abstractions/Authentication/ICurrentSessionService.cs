@@ -1,6 +1,6 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+using Core.Domain.Entities;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
+namespace Core.Application.Abstractions.Authentication;
 
 public interface ICurrentSessionService
 {

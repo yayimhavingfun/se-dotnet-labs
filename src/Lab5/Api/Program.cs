@@ -1,26 +1,43 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Api.Middleware;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application;
-using Itmo.ObjectOrientedProgramming.Lab5.Infrastructure;
+using Api.Authentication;
+using Core.Application;
+using Infrastructure;
+using Microsoft.AspNetCore.Diagnostics;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructurePostgres();
 
+builder.Services.AddAuthentication("SessionScheme")
+    .AddSessionAuthentication();
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseExceptionHandler(errorApp =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
 
-app.UseSessionAuthorization();
+        Exception? exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
+        var response = new
+        {
+            error = exception?.Message ?? "Unknown error",
+            stackTrace = exception?.StackTrace ?? string.Empty,
+        };
+
+        await context.Response.WriteAsJsonAsync(response);
+    });
+});
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

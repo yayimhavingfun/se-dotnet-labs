@@ -1,13 +1,13 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
+namespace Core.Application.Abstractions.Services;
 
 public interface IAccountService
 {
-    Task<TransactionResult> DepositAsync(AccountNumber number, Money amount, CancellationToken ct = default);
+    Task<TransactionResult> DepositAsync(AccountNumber number, Money amount, CancellationToken ct);
 
-    Task<TransactionResult> WithdrawAsync(AccountNumber number, Money amount, CancellationToken ct = default);
+    Task<TransactionResult> WithdrawAsync(AccountNumber number, Money amount, CancellationToken ct);
 
-    Task<BalanceResult> GetBalanceAsync(AccountNumber number, CancellationToken ct = default);
+    Task<BalanceResult> GetBalanceAsync(AccountNumber number, CancellationToken ct);
 }

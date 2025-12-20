@@ -1,6 +1,6 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
+namespace Core.Domain.Results;
 
 public abstract record AccountResult
 {

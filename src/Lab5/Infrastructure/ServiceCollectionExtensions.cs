@@ -1,9 +1,10 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Infrastructure.Postgres;
+using Core.Application.Abstractions.Repositories;
+using Infrastructure.Postgres;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Infrastructure;
+namespace Infrastructure;
 
-public static class PostgresDependencyInjection
+public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructurePostgres(this IServiceCollection services)
     {

@@ -1,10 +1,12 @@
+using Core.Application.Abstractions.Repositories;
+using Core.Domain.Entities;
+using Core.Domain.ValueObjects;
 using Dapper;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Infrastructure.Dto;
+using Microsoft.Extensions.Configuration;
 using Npgsql;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Infrastructure.Postgres;
+namespace Infrastructure.Postgres;
 
 public class PostgresAccountRepository : IAccountRepository
 {
@@ -16,37 +18,48 @@ public class PostgresAccountRepository : IAccountRepository
                             ?? throw new InvalidOperationException("Postgres connection string not found");
     }
 
-    public async Task<Account?> FindByNumberAsync(AccountNumber number, CancellationToken ct = default)
+    public async Task<Account?> FindByNumberAsync(AccountNumber number, CancellationToken ct)
     {
         const string sql = """
-                           SELECT id, account_number, pin_hash, balance, created_at
+                           SELECT 
+                               id AS Id,
+                               account_number AS AccountNumber,
+                               pin_hash AS PinHash,
+                               balance AS Balance,
+                               created_at AS CreatedAt
                            FROM accounts
                            WHERE account_number = @AccountNumber
                            LIMIT 1
                            """;
 
         await using NpgsqlConnection connection = await OpenConnectionAsync(ct);
-        dynamic? row = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new { AccountNumber = number.Value });
+        AccountDto? dto =
+            await connection.QuerySingleOrDefaultAsync<AccountDto>(sql, new { AccountNumber = number.Value });
 
-        return row is null ? null : MapToAccount(row);
+        return dto is null ? null : MapToAccount(dto);
     }
 
-    public async Task<Account?> FindByIdAsync(Guid accountId, CancellationToken ct = default)
+    public async Task<Account?> FindByIdAsync(Guid accountId, CancellationToken ct)
     {
         const string sql = """
-                           SELECT id, account_number, pin_hash, balance, created_at
+                           SELECT 
+                               id AS Id,
+                               account_number AS AccountNumber,
+                               pin_hash AS PinHash,
+                               balance AS Balance,
+                               created_at AS CreatedAt
                            FROM accounts
                            WHERE id = @Id
                            LIMIT 1
                            """;
 
         await using NpgsqlConnection connection = await OpenConnectionAsync(ct);
-        dynamic? row = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new { Id = accountId });
+        AccountDto? dto = await connection.QuerySingleOrDefaultAsync<AccountDto>(sql, new { Id = accountId });
 
-        return row is null ? null : MapToAccount(row);
+        return dto is null ? null : MapToAccount(dto);
     }
 
-    public async Task AddAsync(Account account, CancellationToken ct = default)
+    public async Task AddAsync(Account account, CancellationToken ct)
     {
         const string sql = """
                            INSERT INTO accounts (id, account_number, pin_hash, balance, created_at)
@@ -66,7 +79,7 @@ public class PostgresAccountRepository : IAccountRepository
             });
     }
 
-    public async Task UpdateAsync(Account account, CancellationToken ct = default)
+    public async Task UpdateAsync(Account account, CancellationToken ct)
     {
         const string sql = """
                            UPDATE accounts
@@ -84,14 +97,37 @@ public class PostgresAccountRepository : IAccountRepository
             });
     }
 
-    private static Account MapToAccount(dynamic row)
+    public async Task DeleteAsync(Guid accountId, CancellationToken ct)
     {
+        const string sql = "DELETE FROM accounts WHERE id = @Id";
+
+        await using NpgsqlConnection connection = await OpenConnectionAsync(ct);
+        await connection.ExecuteAsync(sql, new { Id = accountId });
+    }
+
+    private static Account MapToAccount(AccountDto dto)
+    {
+        AccountNumber accountNumber;
+        Money balance;
+
+        try
+        {
+            accountNumber = new AccountNumber(dto.AccountNumber);
+            balance = new Money(dto.Balance);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidOperationException(
+                $"Invalid data in database for account {dto.Id}: {ex.Message}",
+                ex);
+        }
+
         return Account.FromStorage(
-            id: row.id,
-            number: new AccountNumber(row.account_number),
-            pinHash: row.pin_hash,
-            balance: new Money(row.balance),
-            createdAt: row.created_at);
+            dto.Id,
+            accountNumber,
+            dto.PinHash,
+            balance,
+            dto.CreatedAt);
     }
 
     private async Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken ct)

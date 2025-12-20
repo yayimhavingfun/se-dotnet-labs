@@ -1,6 +1,6 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+using Core.Domain.Entities;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
+namespace Core.Domain.Results;
 
 public abstract record SessionResult
 {

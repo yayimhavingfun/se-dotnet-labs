@@ -1,8 +1,8 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+using Core.Application.Abstractions.Repositories;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Entities;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Services;
+namespace Core.Application.Services;
 
 public class TransactionService : ITransactionService
 {

@@ -1,8 +1,8 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Repositories;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Repositories;
+using Core.Application.Services;
+using Core.Domain.Entities;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
 using NSubstitute;
 using Xunit;
 
@@ -13,6 +13,8 @@ public class AccountServiceTests
     private readonly IAccountRepository _accountRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly AccountService _service;
+
+    private readonly CancellationToken ct = CancellationToken.None;
 
     public AccountServiceTests()
     {
@@ -31,17 +33,17 @@ public class AccountServiceTests
 
         var account = new Account(accountNumber, "hash", initialBalance);
 
-        _accountRepository.FindByNumberAsync(accountNumber).Returns(account);
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
 
         // Act
-        TransactionResult result = await _service.DepositAsync(accountNumber, depositAmount);
+        TransactionResult result = await _service.DepositAsync(accountNumber, depositAmount, ct);
 
         // Assert
         Assert.IsType<TransactionResult.Success>(result);
         Assert.Equal(initialBalance + depositAmount, account.Balance);
 
-        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>());
-        await _accountRepository.Received(1).UpdateAsync(account);
+        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.Received(1).UpdateAsync(account, ct);
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public class AccountServiceTests
 
         var account = new Account(accountNumber, "hash", initialBalance);
 
-        _accountRepository.FindByNumberAsync(accountNumber).Returns(account);
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
 
         // Act
         TransactionResult result = await _service.WithdrawAsync(accountNumber, withdrawAmount);
@@ -63,8 +65,8 @@ public class AccountServiceTests
         Assert.IsType<TransactionResult.Success>(result);
         Assert.Equal(initialBalance - withdrawAmount, account.Balance);
 
-        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>());
-        await _accountRepository.Received(1).UpdateAsync(account);
+        await _transactionRepository.Received(1).AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.Received(1).UpdateAsync(account, ct);
     }
 
     [Fact]
@@ -77,7 +79,7 @@ public class AccountServiceTests
 
         var account = new Account(accountNumber, "hash", initialBalance);
 
-        _accountRepository.FindByNumberAsync(accountNumber).Returns(account);
+        _accountRepository.FindByNumberAsync(accountNumber, ct).Returns(account);
 
         // Act
         TransactionResult result = await _service.WithdrawAsync(accountNumber, withdrawAmount);
@@ -87,7 +89,7 @@ public class AccountServiceTests
 
         Assert.Equal(initialBalance, account.Balance);
 
-        await _transactionRepository.DidNotReceive().AddAsync(Arg.Any<Transaction>());
-        await _accountRepository.DidNotReceive().UpdateAsync(Arg.Any<Account>());
+        await _transactionRepository.DidNotReceive().AddAsync(Arg.Any<Transaction>(), ct);
+        await _accountRepository.DidNotReceive().UpdateAsync(Arg.Any<Account>(), ct);
     }
 }

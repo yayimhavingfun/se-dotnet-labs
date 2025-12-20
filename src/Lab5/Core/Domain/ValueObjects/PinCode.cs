@@ -1,4 +1,4 @@
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+namespace Core.Domain.ValueObjects;
 
 public sealed class PinCode : IEquatable<PinCode>
 {

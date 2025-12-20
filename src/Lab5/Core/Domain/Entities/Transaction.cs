@@ -1,7 +1,7 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities.Types;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Domain.Entities.Types;
+using Core.Domain.ValueObjects;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
+namespace Core.Domain.Entities;
 
 public class Transaction
 {
@@ -17,7 +17,13 @@ public class Transaction
 
     public DateTime CreatedAt { get; }
 
-    public Transaction(Guid id, Guid accountId, TransactionType type, Money amount, Money newBalance, DateTime createdAt)
+    public Transaction(
+        Guid id,
+        Guid accountId,
+        TransactionType type,
+        Money amount,
+        Money newBalance,
+        DateTime createdAt)
     {
         Id = id;
         AccountId = accountId;

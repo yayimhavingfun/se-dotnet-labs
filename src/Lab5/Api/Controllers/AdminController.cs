@@ -1,43 +1,48 @@
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Authentication;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Application.Abstractions.Services;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Entities;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.Results;
-using Itmo.ObjectOrientedProgramming.Lab5.Core.Domain.ValueObjects;
+using Core.Application.Abstractions.Authentication;
+using Core.Application.Abstractions.Services;
+using Core.Domain.Results;
+using Core.Domain.ValueObjects;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Itmo.ObjectOrientedProgramming.Lab5.Api.Controllers;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
+[Authorize]
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
-    private readonly ICurrentSessionService _currentSession;
+    private readonly IHashingService _hashingService;
 
-    public AdminController(
-        IAdminService adminService,
-        ICurrentSessionService currentSession)
+    public AdminController(IAdminService adminService, IHashingService hashingService)
     {
         _adminService = adminService;
-        _currentSession = currentSession;
+        _hashingService = hashingService;
     }
+
+    private bool IsAdmin => User.FindFirst("IsAdmin")?.Value == "True";
 
     public record CreateAccountRequest(string AccountNumber, string Pin, decimal InitialBalance = 0);
 
     public record CreateAccountResponse(string AccountNumber);
 
     [HttpPost("create-account")]
-    public async Task<IActionResult> CreateAccount([FromBody] CreateAccountRequest request)
+    public async Task<IActionResult> CreateAccount(
+        [FromBody] CreateAccountRequest request,
+        CancellationToken cancellationToken)
     {
-        IActionResult? adminCheck = RequireAdmin();
-        if (adminCheck is not null) return adminCheck;
+        if (!IsAdmin)
+            return Unauthorized(new { message = "Admin access required" });
 
+        string pinHash = _hashingService.Hash(request.Pin);
         var initialDeposit = new Money(request.InitialBalance);
 
         AccountResult result = await _adminService.CreateAccountAsync(
             new AccountNumber(request.AccountNumber),
-            request.Pin,
-            initialDeposit);
+            pinHash,
+            initialDeposit,
+            cancellationToken);
 
         return result switch
         {
@@ -45,15 +50,5 @@ public class AdminController : ControllerBase
             AccountResult.Failure failure => BadRequest(new { failure.Code, failure.Message }),
             _ => StatusCode(StatusCodes.Status500InternalServerError),
         };
-    }
-
-    private UnauthorizedObjectResult? RequireAdmin()
-    {
-        AtmSession? session = _currentSession.CurrentSession;
-
-        if (session is null || !session.IsAdmin)
-            return Unauthorized(new { message = "Admin session is required" });
-
-        return null;
     }
 }
